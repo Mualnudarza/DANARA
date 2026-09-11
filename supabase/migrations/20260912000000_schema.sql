@@ -1,7 +1,7 @@
-create extension if not exists "uuid-ossp";
+create extension if not exists "pgcrypto";
 
 create table wallets (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
   "name" text not null,
   "account" text not null default '',
@@ -10,7 +10,7 @@ create table wallets (
 );
 
 create table income_types (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
   "name" text not null,
   allocations jsonb not null default '{}'::jsonb,
@@ -18,7 +18,7 @@ create table income_types (
 );
 
 create table ledger_entries (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
   "date" date not null,
   "note" text not null default '',
@@ -30,7 +30,7 @@ create table ledger_entries (
 );
 
 create table allocation_logs (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
   "date" date not null,
   income_type_id uuid references income_types not null,
@@ -39,7 +39,7 @@ create table allocation_logs (
 );
 
 create table transfers (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users not null,
   "date" date not null,
   note text not null default '',
