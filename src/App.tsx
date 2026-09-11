@@ -206,7 +206,7 @@ export default function App() {
           <p className="eyebrow">Manajemen keuangan personal</p>
           <h1>Danara</h1>
           <p>Masuk untuk memulai.</p>
-          <button className="button primary" onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${location.origin}/` } })}>
+          <button className="button primary" onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${location.origin}${import.meta.env.BASE_URL}` } })}>
             Masuk dengan Google
           </button>
         </div>
