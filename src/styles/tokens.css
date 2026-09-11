@@ -1,0 +1,49 @@
+@import "tailwindcss";
+@import "@fontsource/plus-jakarta-sans/400.css";
+@import "@fontsource/plus-jakarta-sans/500.css";
+@import "@fontsource/plus-jakarta-sans/600.css";
+@import "@fontsource/plus-jakarta-sans/700.css";
+@import "@fontsource/plus-jakarta-sans/800.css";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Wave canvas / surface */
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-line: #e2e8f0;
+
+  /* Wave text scale */
+  --color-ink-900: #0f172a;
+  --color-ink-700: #334155;
+  --color-ink-500: #64748b;
+
+  /* Financial accents */
+  --color-flow-in-bg: #ecfdf5;
+  --color-flow-in-text: #047857;
+  --color-flow-in-line: #a7f3d0;
+  --color-flow-out-bg: #fff1f2;
+  --color-flow-out-text: #be123c;
+  --color-flow-out-line: #fecdd3;
+  --color-flow-move-bg: #eef2ff;
+  --color-flow-move-text: #4338ca;
+  --color-flow-move-line: #c7d2fe;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum" 1, "cv05" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink-700);
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}

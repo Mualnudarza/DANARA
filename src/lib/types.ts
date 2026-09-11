@@ -39,6 +39,10 @@ export interface FinanceData {
   allocations: AllocationLog[];
 }
 
+export type View = "dashboard" | "wallets" | "history" | "settings";
+export type ModalKind = "income" | "expense" | "transfer" | null;
+export type LedgerFilter = "all" | "income" | "expense" | "transfer";
+
 export interface Summary {
   totalBalance: number;
   monthIncome: number;
