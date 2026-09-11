@@ -33,8 +33,13 @@ export default function App() {
 
   async function connect() {
     if (!clientId) { setMessage("Masukkan Google OAuth Client ID terlebih dahulu."); return; }
-    try { setBusy(true); setAccessToken(await getAccessToken(clientId)); setMessage("Google terhubung. Pilih atau buat spreadsheet."); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "Koneksi Google gagal."); }
+    try {
+      setBusy(true);
+      const token = await getAccessToken(clientId);
+      setAccessToken(token);
+      if (spreadsheetId) await sync("read", data, token);
+      else setMessage("Google terhubung. Pilih atau buat spreadsheet.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Koneksi Google gagal."); }
     finally { setBusy(false); }
   }
   async function createSheet() {
@@ -43,12 +48,12 @@ export default function App() {
     catch (error) { setMessage(error instanceof Error ? error.message : "Spreadsheet gagal dibuat."); }
     finally { setBusy(false); }
   }
-  async function sync(direction: "read" | "write", source = data) {
-    if (!accessToken || !spreadsheetId) { setMessage("Hubungkan Google dan isi Spreadsheet ID."); return; }
+  async function sync(direction: "read" | "write", source = data, token = accessToken) {
+    if (!token || !spreadsheetId) { setMessage("Hubungkan Google dan isi Spreadsheet ID."); return; }
     try {
-      setBusy(true); await ensureTemplate(spreadsheetId, accessToken);
-      if (direction === "read") { setData(await readFinanceData(spreadsheetId, accessToken)); setMessage("Data dimuat dari Google Sheets."); }
-      else { await saveFinanceData(spreadsheetId, accessToken, source); setMessage("Data disimpan ke Google Sheets."); }
+      setBusy(true); await ensureTemplate(spreadsheetId, token);
+      if (direction === "read") { setData(await readFinanceData(spreadsheetId, token)); setMessage("Data dimuat dari Google Sheets."); }
+      else { await saveFinanceData(spreadsheetId, token, source); setMessage("Data disimpan ke Google Sheets."); }
     } catch (error) { setMessage(error instanceof Error ? error.message : "Sinkronisasi gagal."); }
     finally { setBusy(false); }
   }
