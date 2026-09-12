@@ -37,10 +37,50 @@ export interface FinanceData {
   incomeTypes: IncomeType[];
   entries: LedgerEntry[];
   allocations: AllocationLog[];
+  debts: Debt[];
+  debtPayments: DebtPayment[];
+  budgets: Budget[];
 }
 
-export type View = "dashboard" | "wallets" | "history" | "settings";
-export type ModalKind = "income" | "expense" | "transfer" | null;
+export type DebtDirection = "owe" | "owed";
+export type DebtStatus = "active" | "paid";
+
+export interface Debt {
+  id: string;
+  name: string;
+  direction: DebtDirection;
+  initialAmount: number;
+  note: string;
+  status: DebtStatus;
+}
+
+export interface DebtPayment {
+  id: string;
+  debtId: string;
+  date: string;
+  amount: number;
+  walletId: string;
+  note: string;
+}
+
+export interface Budget {
+  id: string;
+  walletId: string;
+  month: string;
+  limitAmount: number;
+}
+
+export type BudgetStatus = "safe" | "warning" | "over";
+
+export interface DayAggregate {
+  income: number;
+  expense: number;
+  count: number;
+  hasTransfer: boolean;
+}
+
+export type View = "dashboard" | "wallets" | "history" | "calendar" | "debts" | "settings";
+export type ModalKind = "income" | "expense" | "transfer" | "debt" | "debt-payment" | null;
 export type LedgerFilter = "all" | "income" | "expense" | "transfer";
 
 export interface Summary {

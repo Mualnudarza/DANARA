@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase, loadFinanceData } from "./lib/supabase";
 import { calculateBalances, dashboardSummary, isValidAllocation, newTransfer, splitIncome } from "./lib/finance";
-import type { FinanceData, IncomeType, LedgerFilter, ModalKind, View, Wallet } from "./lib/types";
+import type { Debt, FinanceData, IncomeType, LedgerFilter, ModalKind, View, Wallet } from "./lib/types";
 import type { User } from "@supabase/supabase-js";
 import AppLayout from "./components/layout/AppLayout";
 import DashboardView from "./components/views/DashboardView";
 import WalletsView from "./components/views/WalletsView";
 import HistoryView from "./components/views/HistoryView";
+import CalendarView from "./components/views/CalendarView";
+import DebtsView from "./components/views/DebtsView";
+import BudgetSection from "./components/views/BudgetSection";
 import SettingsView from "./components/views/SettingsView";
 import { ExpenseModal, IncomeModal, TransferModal } from "./components/forms/TransactionModals";
 
@@ -15,7 +18,7 @@ function inputNumber(value: string) {
 }
 
 export default function App() {
-  const [data, setData] = useState<FinanceData>({ wallets: [], incomeTypes: [], entries: [], allocations: [] });
+  const [data, setData] = useState<FinanceData>({ wallets: [], incomeTypes: [], entries: [], allocations: [], debts: [], debtPayments: [], budgets: [] });
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<View>("dashboard");
   const [modal, setModal] = useState<ModalKind>(null);
@@ -182,6 +185,102 @@ export default function App() {
     setMessage("Alokasi disimpan. Berlaku untuk pemasukan baru.");
   }
 
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  function setBudget(walletId: string, limit: number) {
+    if (limit <= 0 || !Number.isSafeInteger(limit)) {
+      setMessage("Pagu harus bilangan bulat lebih dari nol.");
+      return;
+    }
+    const existing = data.budgets.find((item) => item.walletId === walletId && item.month === currentMonth);
+    const budgets = existing
+      ? data.budgets.map((item) => (item.id === existing.id ? { ...item, limitAmount: limit } : item))
+      : [...data.budgets, { id: crypto.randomUUID(), walletId, month: currentMonth, limitAmount: limit }];
+    void save({ ...data, budgets });
+    setMessage(`Pagu bulan ${currentMonth} disimpan.`);
+  }
+
+  function addDebt(form: FormData) {
+    const name = String(form.get("name")).trim();
+    const direction = String(form.get("direction")) as Debt["direction"];
+    const amount = inputNumber(String(form.get("amount")));
+    if (!name) {
+      setMessage("Nama orang wajib diisi.");
+      return;
+    }
+    if (amount <= 0) {
+      setMessage("Nominal hutang harus lebih dari nol.");
+      return;
+    }
+    void save({
+      ...data,
+      debts: [...data.debts, { id: crypto.randomUUID(), name, direction: direction === "owed" ? "owed" : "owe", initialAmount: amount, note: String(form.get("note")).trim(), status: "active" }],
+    });
+    setMessage("Hutang dicatat. Saldo dompet tidak berubah.");
+  }
+
+  function payDebt(form: FormData) {
+    const debt = data.debts.find((item) => item.id === String(form.get("debtId")));
+    const walletId = String(form.get("walletId"));
+    const amount = inputNumber(String(form.get("amount")));
+    const date = String(form.get("date"));
+    if (!debt || debt.status !== "active") {
+      setMessage("Hutang tidak ditemukan atau sudah lunas.");
+      return;
+    }
+    const remaining = debt.initialAmount - data.debtPayments.filter((payment) => payment.debtId === debt.id).reduce((sum, payment) => sum + payment.amount, 0);
+    if (amount <= 0 || amount > remaining) {
+      setMessage("Nominal melebihi sisa hutang.");
+      return;
+    }
+    const note = debt.direction === "owe" ? `Bayar hutang ${debt.name}` : `Terima piutang ${debt.name}`;
+    if (debt.direction === "owe") {
+      if (amount > (balances[walletId] ?? 0)) {
+        setMessage("Nominal melebihi saldo dompet sumber.");
+        return;
+      }
+      const paymentId = crypto.randomUUID();
+      void save({
+        ...data,
+        entries: [...data.entries, { id: crypto.randomUUID(), date, note, walletId, kind: "expense", amount }],
+        debtPayments: [...data.debtPayments, { id: paymentId, debtId: debt.id, date, amount, walletId, note }],
+      });
+    } else {
+      const paymentId = crypto.randomUUID();
+      void save({
+        ...data,
+        entries: [...data.entries, { id: crypto.randomUUID(), date, note, walletId, kind: "income", amount }],
+        debtPayments: [...data.debtPayments, { id: paymentId, debtId: debt.id, date, amount, walletId, note }],
+      });
+    }
+    setMessage("Pembayaran dicatat ke dompet dan sisa hutang.");
+  }
+
+  function settleDebt(id: string) {
+    const debt = data.debts.find((item) => item.id === id);
+    if (!debt) return;
+    if (!window.confirm(`Tandai hutang ${debt.name} sebagai lunas?`)) return;
+    void save({ ...data, debts: data.debts.map((item) => (item.id === id ? { ...item, status: "paid" as const } : item)) });
+    setMessage("Hutang ditandai lunas. Riwayat pembayaran tetap tersimpan.");
+  }
+
+  async function deleteDebt(id: string) {
+    if (data.debtPayments.some((payment) => payment.debtId === id)) {
+      setMessage("Hutang tidak bisa dihapus karena memiliki riwayat pembayaran.");
+      return;
+    }
+    if (!window.confirm("Hapus catatan hutang ini?")) return;
+    const next = { ...data, debts: data.debts.filter((item) => item.id !== id) };
+    setData(next);
+    const { error } = await supabase.from("debts").delete().eq("id", id);
+    if (error) {
+      setMessage(error.message);
+      void refresh();
+    } else {
+      setMessage("Hutang dihapus.");
+    }
+  }
+
   async function deleteIncomeType(id: string) {
     if (data.allocations.some((log) => log.incomeTypeId === id)) {
       setMessage("Tipe tidak bisa dihapus karena sudah dipakai pada riwayat pemasukan.");
@@ -226,9 +325,20 @@ export default function App() {
       refresh={() => void refresh()}
       signOut={() => void supabase.auth.signOut()}
     >
-      {view === "dashboard" && <DashboardView data={data} summary={summary} balances={balances} filter={filter} setFilter={setFilter} setModal={setModal} />}
+      {view === "dashboard" && (
+        <div className="grid gap-5">
+          <DashboardView data={data} summary={summary} balances={balances} filter={filter} setFilter={setFilter} setModal={setModal} />
+          <section className="rounded-xl border border-line bg-surface p-4 shadow-[0_1px_2px_0_rgb(0_0_0/0.05)]">
+            <h2 className="text-sm font-bold text-ink-900">Budget bulan {currentMonth}</h2>
+            <p className="mb-3 mt-0.5 text-xs text-ink-500">Pagu pengeluaran per dompet. Hanya peringatan, tidak memblokir transaksi.</p>
+            <BudgetSection data={data} month={currentMonth} setBudget={setBudget} />
+          </section>
+        </div>
+      )}
       {view === "wallets" && <WalletsView data={data} balances={balances} addWallet={addWallet} updateWallet={updateWallet} deleteWallet={(id) => void deleteWallet(id)} />}
       {view === "history" && <HistoryView data={data} filter={filter} setFilter={setFilter} />}
+      {view === "calendar" && <CalendarView data={data} />}
+      {view === "debts" && <DebtsView data={data} addDebt={addDebt} payDebt={payDebt} settleDebt={settleDebt} deleteDebt={(id) => void deleteDebt(id)} />}
       {view === "settings" && <SettingsView data={data} addIncomeType={addIncomeType} updateIncomeType={updateIncomeType} deleteIncomeType={(id) => void deleteIncomeType(id)} />}
       {modal === "income" && <IncomeModal data={data} onClose={() => setModal(null)} onSubmit={addIncome} />}
       {modal === "expense" && <ExpenseModal data={data} balances={balances} onClose={() => setModal(null)} onSubmit={addExpense} />}

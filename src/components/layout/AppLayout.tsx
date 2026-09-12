@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeftRight, ArrowUpRight, BarChart3, History, LogOut, Menu, Plus, RefreshCw, Settings2, WalletCards, X } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, BarChart3, CalendarDays, Handshake, History, LogOut, Menu, Plus, RefreshCw, Settings2, WalletCards, X } from "lucide-react";
 import { rupiah } from "../../lib/finance";
 import type { ModalKind, UserLike, View } from "./types";
 
@@ -7,6 +7,8 @@ const navItems: { key: View; label: string; icon: typeof BarChart3 }[] = [
   { key: "dashboard", label: "Dashboard", icon: BarChart3 },
   { key: "wallets", label: "Dompet", icon: WalletCards },
   { key: "history", label: "Riwayat", icon: History },
+  { key: "calendar", label: "Kalender", icon: CalendarDays },
+  { key: "debts", label: "Hutang", icon: Handshake },
   { key: "settings", label: "Pengaturan", icon: Settings2 },
 ];
 
@@ -14,6 +16,8 @@ const viewTitles: Record<View, string> = {
   dashboard: "Dashboard",
   wallets: "Dompet",
   history: "Riwayat transaksi",
+  calendar: "Kalender transaksi",
+  debts: "Hutang & piutang",
   settings: "Pengaturan alokasi",
 };
 
@@ -136,7 +140,7 @@ export default function AppLayout({ view, setView, setModal, user, totalBalance,
           </main>
 
           {/* Bottom nav for phones */}
-          <nav className="sticky bottom-0 z-40 grid grid-cols-4 gap-1 border-t border-line bg-surface px-2 py-2 lg:hidden">
+          <nav className="sticky bottom-0 z-40 grid grid-cols-6 gap-1 border-t border-line bg-surface px-2 py-2 lg:hidden">
             {navItems.map(({ key, label, icon: Icon }) => (
               <button key={key} onClick={() => setView(key)} className={`flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium ${view === key ? "text-ink-900" : "text-ink-500"}`}>
                 <Icon size={19} />
