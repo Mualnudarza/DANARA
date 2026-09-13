@@ -1,4 +1,4 @@
-import type { BudgetStatus, DayAggregate, Debt, DebtPayment, IncomeType, LedgerEntry, Summary, Wallet } from "./types";
+import type { Asset, DayAggregate, Debt, DebtPayment, IncomeType, LedgerEntry, Summary, Wallet, WalletTarget } from "./types";
 
 export const rupiah = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -51,6 +51,21 @@ export function dashboardSummary(wallets: Wallet[], entries: LedgerEntry[], now 
   };
 }
 
+export function targetProgress(balance: number, target: number) {
+  if (target <= 0) throw new Error("Target harus lebih dari nol.");
+  const pct = Math.round((balance / target) * 100);
+  return {
+    pct: Math.max(0, Math.min(100, pct)),
+    rawPct: pct,
+    remaining: Math.max(0, target - balance),
+    reached: balance >= target,
+  };
+}
+
+export function walletTargetLookup(targets: WalletTarget[]) {
+  return Object.fromEntries(targets.map((t) => [t.walletId, t.targetAmount])) as Record<string, number>;
+}
+
 export function debtRemaining(debt: Debt, payments: DebtPayment[]) {
   const paid = payments.filter((payment) => payment.debtId === debt.id).reduce((sum, payment) => sum + payment.amount, 0);
   return Math.max(0, debt.initialAmount - paid);
@@ -64,16 +79,20 @@ export function debtTotals(debts: Debt[], payments: DebtPayment[]) {
   return { owe, owed, net: owed - owe };
 }
 
-export function budgetSpent(entries: LedgerEntry[], walletId: string, month: string) {
-  return entries
-    .filter((entry) => entry.walletId === walletId && entry.kind === "expense" && entry.date.startsWith(month))
-    .reduce((sum, entry) => sum + entry.amount, 0);
+export function assetValue(asset: Asset) {
+  if (asset.status === "sold") return asset.sellPrice ?? asset.currentPrice;
+  return asset.currentPrice;
 }
 
-export function budgetStatus(limit: number, spent: number): { remaining: number; pct: number; status: BudgetStatus } {
-  if (limit <= 0) throw new Error("Pagu harus lebih dari nol.");
-  const pct = Math.round((spent / limit) * 100);
-  return { remaining: limit - spent, pct, status: pct > 100 ? "over" : pct >= 80 ? "warning" : "safe" };
+export function assetPL(asset: Asset) {
+  const value = assetValue(asset);
+  const diff = value - asset.buyPrice;
+  const pct = asset.buyPrice > 0 ? Math.round((diff / asset.buyPrice) * 100) : 0;
+  return { value, diff, pct, isProfit: diff >= 0 };
+}
+
+export function activeAssetsTotal(assets: Asset[]) {
+  return assets.filter((a) => a.status === "active").reduce((sum, a) => sum + a.currentPrice, 0);
 }
 
 export function groupByDay(entries: LedgerEntry[], year: number, month: number): Record<string, DayAggregate> {

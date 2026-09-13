@@ -1,23 +1,26 @@
 import { useState } from "react";
-import { ArrowLeftRight, ArrowUpRight, BarChart3, CalendarDays, Handshake, History, LogOut, Menu, Plus, RefreshCw, Settings2, WalletCards, X } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, BarChart3, CalendarDays, Gem, Handshake, History, LogOut, Menu, Plus, RefreshCw, Settings2, WalletCards, X } from "lucide-react";
 import { rupiah } from "../../lib/finance";
 import type { ModalKind, UserLike, View } from "./types";
+import Toast from "../ui/Toast";
 
 const navItems: { key: View; label: string; icon: typeof BarChart3 }[] = [
   { key: "dashboard", label: "Dashboard", icon: BarChart3 },
   { key: "wallets", label: "Dompet", icon: WalletCards },
+  { key: "assets", label: "Aset", icon: Gem },
+  { key: "debts", label: "Hutang", icon: Handshake },
   { key: "history", label: "Riwayat", icon: History },
   { key: "calendar", label: "Kalender", icon: CalendarDays },
-  { key: "debts", label: "Hutang", icon: Handshake },
   { key: "settings", label: "Pengaturan", icon: Settings2 },
 ];
 
 const viewTitles: Record<View, string> = {
   dashboard: "Dashboard",
   wallets: "Dompet",
+  assets: "Pencatatan aset",
+  debts: "Hutang & piutang",
   history: "Riwayat transaksi",
   calendar: "Kalender transaksi",
-  debts: "Hutang & piutang",
   settings: "Pengaturan alokasi",
 };
 
@@ -126,25 +129,19 @@ export default function AppLayout({ view, setView, setModal, user, totalBalance,
             </div>
           </header>
 
-          {message && (
-            <div className="px-4 pt-4 sm:px-6" role="status">
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
-                <span>{message}</span>
-                <button onClick={clearMessage} aria-label="Tutup pesan" className="text-lg leading-none">×</button>
-              </div>
-            </div>
-          )}
-
           <main className="px-4 py-6 sm:px-6 sm:py-8">
             {children}
           </main>
 
+          {/* Floating Toast Notification */}
+          <Toast message={message} onClose={clearMessage} />
+
           {/* Bottom nav for phones */}
-          <nav className="sticky bottom-0 z-40 grid grid-cols-6 gap-1 border-t border-line bg-surface px-2 py-2 lg:hidden">
+          <nav className="sticky bottom-0 z-40 grid grid-cols-7 gap-1 border-t border-line bg-surface px-2 py-2 lg:hidden">
             {navItems.map(({ key, label, icon: Icon }) => (
-              <button key={key} onClick={() => setView(key)} className={`flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium ${view === key ? "text-ink-900" : "text-ink-500"}`}>
-                <Icon size={19} />
-                {label}
+              <button key={key} onClick={() => setView(key)} className={`flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium ${view === key ? "text-ink-900" : "text-ink-500"}`}>
+                <Icon size={17} />
+                <span className="truncate">{label}</span>
               </button>
             ))}
           </nav>

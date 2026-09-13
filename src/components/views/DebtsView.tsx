@@ -6,14 +6,25 @@ import { Empty } from "../ui/primitives";
 const today = new Date().toISOString().slice(0, 10);
 const inputCls = "h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm";
 
-export default function DebtsView({ data, addDebt, payDebt, settleDebt, deleteDebt }: {
+export default function DebtsView({
+  data,
+  balances,
+  addDebt,
+  topUpDebt,
+  payDebt,
+  settleDebt,
+  deleteDebt,
+}: {
   data: FinanceData;
+  balances: Record<string, number>;
   addDebt: (form: FormData) => void;
+  topUpDebt: (form: FormData) => void;
   payDebt: (form: FormData) => void;
   settleDebt: (id: string) => void;
   deleteDebt: (id: string) => void;
 }) {
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [topUpId, setTopUpId] = useState<string | null>(null);
   const totals = debtTotals(data.debts, data.debtPayments);
   const active = data.debts.filter((debt) => debt.status === "active");
   const paid = data.debts.filter((debt) => debt.status === "paid");
@@ -28,7 +39,7 @@ export default function DebtsView({ data, addDebt, payDebt, settleDebt, deleteDe
 
       <section className="rounded-xl border border-line bg-surface p-4 shadow-[0_1px_2px_0_rgb(0_0_0/0.05)]">
         <h2 className="text-sm font-bold text-ink-900">Hutang aktif</h2>
-        <p className="mt-0.5 text-xs text-ink-500">Bayar lewat dompet supaya saldo tercatat di ledger.</p>
+        <p className="mt-0.5 text-xs text-ink-500">Bayar atau tambah hutang lewat dompet supaya tercatat di ledger.</p>
         {active.length === 0 ? (
           <div className="mt-3"><Empty label="Tidak ada hutang aktif." /></div>
         ) : (
@@ -48,18 +59,31 @@ export default function DebtsView({ data, addDebt, payDebt, settleDebt, deleteDe
                     </span>
                   </div>
                   <p className="tabular mt-3 text-xl font-extrabold tracking-tight text-ink-900">{rupiah.format(remaining)}</p>
-                  <p className="tabular text-xs text-ink-500">dari {rupiah.format(debt.initialAmount)} · {pct}% lunas</p>
+                  <p className="tabular text-xs text-ink-500">dari total {rupiah.format(debt.initialAmount)} · {pct}% lunas</p>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
                     <div className="h-full rounded-full bg-ink-900" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => setPayingId(payingId === debt.id ? null : debt.id)} className="rounded-lg bg-ink-900 px-2.5 py-1.5 text-xs font-semibold text-white">
+                    <button
+                      type="button"
+                      onClick={() => { setPayingId(payingId === debt.id ? null : debt.id); setTopUpId(null); }}
+                      className="rounded-lg bg-ink-900 px-2.5 py-1.5 text-xs font-semibold text-white"
+                    >
                       {payingId === debt.id ? "Tutup" : debt.direction === "owe" ? "Bayar" : "Terima"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setTopUpId(topUpId === debt.id ? null : debt.id); setPayingId(null); }}
+                      className="rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-ink-700 hover:bg-slate-50"
+                    >
+                      {topUpId === debt.id ? "Tutup" : "+ Tambah hutang"}
                     </button>
                     <button type="button" onClick={() => settleDebt(debt.id)} className="rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-ink-700">Lunasi</button>
                     <button type="button" onClick={() => deleteDebt(debt.id)} className="rounded-lg border border-flow-out-line bg-flow-out-bg px-2.5 py-1.5 text-xs font-semibold text-flow-out-text">Hapus</button>
                   </div>
-                  {payingId === debt.id && <PayForm debt={debt} data={data} onSubmit={payDebt} />}
+
+                  {payingId === debt.id && <PayForm debt={debt} data={data} balances={balances} onSubmit={(f) => { payDebt(f); setPayingId(null); }} />}
+                  {topUpId === debt.id && <TopUpForm debt={debt} data={data} balances={balances} onSubmit={(f) => { topUpDebt(f); setTopUpId(null); }} />}
                 </article>
               );
             })}
@@ -86,29 +110,8 @@ export default function DebtsView({ data, addDebt, payDebt, settleDebt, deleteDe
 
       <section className="max-w-md rounded-xl border border-line bg-surface p-4">
         <h2 className="text-sm font-bold text-ink-900">Catat hutang baru</h2>
-        <p className="mb-3 mt-0.5 text-xs text-ink-500">Mencatat hutang tidak mengubah saldo dompet.</p>
-        <form action={(form) => addDebt(form)} className="grid gap-3">
-          <label className="grid gap-1.5">
-            <span className="text-xs font-semibold text-ink-700">Nama orang</span>
-            <input name="name" required placeholder="Contoh: Budi" className={inputCls} />
-          </label>
-          <label className="grid gap-1.5">
-            <span className="text-xs font-semibold text-ink-700">Jenis</span>
-            <select name="direction" className={inputCls}>
-              <option value="owe">Aku berhutang (pinjam)</option>
-              <option value="owed">Aku menghutangkan (kasih pinjam)</option>
-            </select>
-          </label>
-          <label className="grid gap-1.5">
-            <span className="text-xs font-semibold text-ink-700">Nominal</span>
-            <input name="amount" inputMode="numeric" required placeholder="1000000" className={`${inputCls} tabular`} />
-          </label>
-          <label className="grid gap-1.5">
-            <span className="text-xs font-semibold text-ink-700">Catatan</span>
-            <input name="note" placeholder="Contoh: Pinjam darurat" className={inputCls} />
-          </label>
-          <button className="rounded-lg bg-ink-900 px-3 py-2.5 text-sm font-semibold text-white" type="submit">Simpan hutang</button>
-        </form>
+        <p className="mb-3 mt-0.5 text-xs text-ink-500">Jika menghutangkan, kamu bisa memotong saldo dompet atau memilih luar dompet.</p>
+        <NewDebtForm data={data} balances={balances} onSubmit={addDebt} />
       </section>
     </div>
   );
@@ -128,18 +131,77 @@ function SummaryCard({ label, value, hint, tone }: { label: string; value: strin
   );
 }
 
-function PayForm({ debt, data, onSubmit }: { debt: Debt; data: FinanceData; onSubmit: (form: FormData) => void }) {
+function NewDebtForm({ data, balances, onSubmit }: { data: FinanceData; balances: Record<string, number>; onSubmit: (form: FormData) => void }) {
+  const [direction, setDirection] = useState<Debt["direction"]>("owe");
+  const [walletId, setWalletId] = useState<string>("outside");
+
+  return (
+    <form action={(form) => onSubmit(form)} className="grid gap-3">
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold text-ink-700">Nama orang</span>
+        <input name="name" required placeholder="Contoh: Budi" className={inputCls} />
+      </label>
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold text-ink-700">Jenis</span>
+        <select name="direction" value={direction} onChange={(e) => setDirection(e.target.value as Debt["direction"])} className={inputCls}>
+          <option value="owe">Aku berhutang (pinjam dari orang)</option>
+          <option value="owed">Aku menghutangkan (kasih pinjam)</option>
+        </select>
+      </label>
+
+      {direction === "owed" && (
+        <label className="grid gap-1.5">
+          <span className="text-xs font-semibold text-ink-700">Sumber dana pinjaman</span>
+          <select name="sourceWalletId" value={walletId} onChange={(e) => setWalletId(e.target.value)} className={inputCls}>
+            <option value="outside">Di luar dompet (uang kerabat / tunai lain)</option>
+            {data.wallets.map((wallet) => (
+              <option value={wallet.id} key={wallet.id}>
+                {wallet.name} (tersedia {rupiah.format(balances[wallet.id] ?? 0)})
+              </option>
+            ))}
+          </select>
+          {walletId !== "outside" && (
+            <span className="text-[11px] text-ink-500">Saldo dompet ini akan terpotong sebagai pengeluaran pinjaman.</span>
+          )}
+        </label>
+      )}
+
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold text-ink-700">Nominal</span>
+        <input name="amount" inputMode="numeric" required placeholder="1000000" className={`${inputCls} tabular`} />
+      </label>
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold text-ink-700">Tanggal</span>
+        <input name="date" type="date" defaultValue={today} required className={inputCls} />
+      </label>
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold text-ink-700">Catatan</span>
+        <input name="note" placeholder="Contoh: Pinjam darurat" className={inputCls} />
+      </label>
+      <button className="rounded-lg bg-ink-900 px-3 py-2.5 text-sm font-semibold text-white" type="submit">Simpan hutang</button>
+    </form>
+  );
+}
+
+function PayForm({ debt, data, balances, onSubmit }: { debt: Debt; data: FinanceData; balances: Record<string, number>; onSubmit: (form: FormData) => void }) {
   const remaining = debtRemaining(debt, data.debtPayments);
+  const [walletId, setWalletId] = useState(data.wallets[0]?.id ?? "outside");
+
   return (
     <form action={(form) => onSubmit(form)} className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3">
       <input type="hidden" name="debtId" value={debt.id} />
       <p className="text-xs text-ink-500">Sisa: <strong className="tabular text-ink-900">{rupiah.format(remaining)}</strong></p>
       <label className="grid gap-1">
-        <span className="text-[11px] font-semibold text-ink-700">{debt.direction === "owe" ? "Bayar dari dompet" : "Terima ke dompet"}</span>
-        <select name="walletId" required className={inputCls}>
+        <span className="text-[11px] font-semibold text-ink-700">
+          {debt.direction === "owe" ? "Bayar dari dompet" : "Terima ke dompet"}
+        </span>
+        <select name="walletId" value={walletId} onChange={(e) => setWalletId(e.target.value)} required className={inputCls}>
           {data.wallets.map((wallet) => (
-            <option value={wallet.id} key={wallet.id}>{wallet.name}</option>
+            <option value={wallet.id} key={wallet.id}>
+              {wallet.name} ({debt.direction === "owe" ? `saldo ${rupiah.format(balances[wallet.id] ?? 0)}` : ""})
+            </option>
           ))}
+          <option value="outside">Di luar dompet (tidak catat ledger)</option>
         </select>
       </label>
       <label className="grid gap-1">
@@ -151,6 +213,46 @@ function PayForm({ debt, data, onSubmit }: { debt: Debt; data: FinanceData; onSu
         <input name="date" type="date" defaultValue={today} required className={inputCls} />
       </label>
       <button className="rounded-lg bg-ink-900 px-3 py-2 text-xs font-semibold text-white" type="submit">Simpan pembayaran</button>
+    </form>
+  );
+}
+
+function TopUpForm({ debt, data, balances, onSubmit }: { debt: Debt; data: FinanceData; balances: Record<string, number>; onSubmit: (form: FormData) => void }) {
+  const [walletId, setWalletId] = useState("outside");
+
+  return (
+    <form action={(form) => onSubmit(form)} className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3">
+      <input type="hidden" name="debtId" value={debt.id} />
+      <p className="text-xs font-semibold text-ink-900">Tambah nominal hutang ({debt.name})</p>
+      <p className="text-[11px] text-ink-500">Nominal akan diakumulasikan ke total hutang yang ada.</p>
+
+      {debt.direction === "owed" && (
+        <label className="grid gap-1">
+          <span className="text-[11px] font-semibold text-ink-700">Sumber dana pinjaman tambahan</span>
+          <select name="walletId" value={walletId} onChange={(e) => setWalletId(e.target.value)} className={inputCls}>
+            <option value="outside">Di luar dompet</option>
+            {data.wallets.map((wallet) => (
+              <option value={wallet.id} key={wallet.id}>
+                {wallet.name} (saldo {rupiah.format(balances[wallet.id] ?? 0)})
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      <label className="grid gap-1">
+        <span className="text-[11px] font-semibold text-ink-700">Nominal tambahan</span>
+        <input name="amount" inputMode="numeric" required placeholder="Contoh: 15000000" className={`${inputCls} tabular`} />
+      </label>
+      <label className="grid gap-1">
+        <span className="text-[11px] font-semibold text-ink-700">Tanggal</span>
+        <input name="date" type="date" defaultValue={today} required className={inputCls} />
+      </label>
+      <label className="grid gap-1">
+        <span className="text-[11px] font-semibold text-ink-700">Catatan tambahan</span>
+        <input name="note" placeholder="Contoh: Tambah pinjam untuk dekorasi" className={inputCls} />
+      </label>
+      <button className="rounded-lg bg-ink-900 px-3 py-2 text-xs font-semibold text-white" type="submit">Tambah ke hutang</button>
     </form>
   );
 }

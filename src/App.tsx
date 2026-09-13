@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase, loadFinanceData } from "./lib/supabase";
 import { calculateBalances, dashboardSummary, isValidAllocation, newTransfer, splitIncome } from "./lib/finance";
-import type { Debt, FinanceData, IncomeType, LedgerFilter, ModalKind, View, Wallet } from "./lib/types";
+import type { Asset, Debt, FinanceData, IncomeType, LedgerFilter, ModalKind, View, Wallet } from "./lib/types";
 import type { User } from "@supabase/supabase-js";
 import AppLayout from "./components/layout/AppLayout";
 import DashboardView from "./components/views/DashboardView";
 import WalletsView from "./components/views/WalletsView";
+import AssetsView from "./components/views/AssetsView";
 import HistoryView from "./components/views/HistoryView";
 import CalendarView from "./components/views/CalendarView";
 import DebtsView from "./components/views/DebtsView";
-import BudgetSection from "./components/views/BudgetSection";
 import SettingsView from "./components/views/SettingsView";
 import { ExpenseModal, IncomeModal, TransferModal } from "./components/forms/TransactionModals";
 
@@ -18,7 +18,16 @@ function inputNumber(value: string) {
 }
 
 export default function App() {
-  const [data, setData] = useState<FinanceData>({ wallets: [], incomeTypes: [], entries: [], allocations: [], debts: [], debtPayments: [], budgets: [] });
+  const [data, setData] = useState<FinanceData>({
+    wallets: [],
+    walletTargets: [],
+    incomeTypes: [],
+    entries: [],
+    allocations: [],
+    debts: [],
+    debtPayments: [],
+    assets: [],
+  });
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<View>("dashboard");
   const [modal, setModal] = useState<ModalKind>(null);
@@ -150,7 +159,11 @@ export default function App() {
       return;
     }
     if (!window.confirm("Hapus dompet ini?")) return;
-    const next = { ...data, wallets: data.wallets.filter((item) => item.id !== id) };
+    const next = {
+      ...data,
+      wallets: data.wallets.filter((item) => item.id !== id),
+      walletTargets: data.walletTargets.filter((item) => item.walletId !== id),
+    };
     setData(next);
     const { error } = await supabase.from("wallets").delete().eq("id", id);
     if (error) {
@@ -159,6 +172,29 @@ export default function App() {
     } else {
       setMessage("Dompet dihapus.");
     }
+  }
+
+  async function setWalletTarget(walletId: string, targetAmount: number) {
+    if (targetAmount <= 0) {
+      // Delete target if cleared
+      const nextTargets = data.walletTargets.filter((t) => t.walletId !== walletId);
+      setData({ ...data, walletTargets: nextTargets });
+      await supabase.from("wallet_targets").delete().eq("wallet_id", walletId);
+      setMessage("Target dompet dihapus.");
+      return;
+    }
+
+    const existing = data.walletTargets.find((t) => t.walletId === walletId);
+    const updatedTarget = existing
+      ? { ...existing, targetAmount }
+      : { id: crypto.randomUUID(), walletId, targetAmount };
+
+    const nextTargets = existing
+      ? data.walletTargets.map((t) => (t.id === existing.id ? updatedTarget : t))
+      : [...data.walletTargets, updatedTarget];
+
+    void save({ ...data, walletTargets: nextTargets });
+    setMessage("Target dompet diperbarui.");
   }
 
   function addIncomeType(name: string) {
@@ -185,25 +221,32 @@ export default function App() {
     setMessage("Alokasi disimpan. Berlaku untuk pemasukan baru.");
   }
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
-
-  function setBudget(walletId: string, limit: number) {
-    if (limit <= 0 || !Number.isSafeInteger(limit)) {
-      setMessage("Pagu harus bilangan bulat lebih dari nol.");
+  async function deleteIncomeType(id: string) {
+    if (data.allocations.some((log) => log.incomeTypeId === id)) {
+      setMessage("Tipe tidak bisa dihapus karena sudah dipakai pada riwayat pemasukan.");
       return;
     }
-    const existing = data.budgets.find((item) => item.walletId === walletId && item.month === currentMonth);
-    const budgets = existing
-      ? data.budgets.map((item) => (item.id === existing.id ? { ...item, limitAmount: limit } : item))
-      : [...data.budgets, { id: crypto.randomUUID(), walletId, month: currentMonth, limitAmount: limit }];
-    void save({ ...data, budgets });
-    setMessage(`Pagu bulan ${currentMonth} disimpan.`);
+    if (!window.confirm("Hapus tipe alokasi ini?")) return;
+    const next = { ...data, incomeTypes: data.incomeTypes.filter((item) => item.id !== id) };
+    setData(next);
+    const { error } = await supabase.from("income_types").delete().eq("id", id);
+    if (error) {
+      setMessage(error.message);
+      void refresh();
+    } else {
+      setMessage("Tipe dihapus.");
+    }
   }
 
+  // --- DEBTS with source wallet & top-up ---
   function addDebt(form: FormData) {
     const name = String(form.get("name")).trim();
     const direction = String(form.get("direction")) as Debt["direction"];
     const amount = inputNumber(String(form.get("amount")));
+    const sourceWalletId = String(form.get("sourceWalletId") || "outside");
+    const date = String(form.get("date"));
+    const note = String(form.get("note")).trim();
+
     if (!name) {
       setMessage("Nama orang wajib diisi.");
       return;
@@ -212,11 +255,97 @@ export default function App() {
       setMessage("Nominal hutang harus lebih dari nol.");
       return;
     }
+
+    let nextEntries = data.entries;
+
+    // If lending money and sourced from wallet, record expense
+    if (direction === "owed" && sourceWalletId !== "outside") {
+      if (amount > (balances[sourceWalletId] ?? 0)) {
+        setMessage("Nominal melebihi saldo dompet sumber.");
+        return;
+      }
+      const entryId = crypto.randomUUID();
+      nextEntries = [
+        ...nextEntries,
+        {
+          id: entryId,
+          date,
+          note: `Pinjaman ke ${name}${note ? ` · ${note}` : ""}`,
+          walletId: sourceWalletId,
+          kind: "expense",
+          amount,
+        },
+      ];
+    }
+
+    const newDebt: Debt = {
+      id: crypto.randomUUID(),
+      name,
+      direction: direction === "owed" ? "owed" : "owe",
+      initialAmount: amount,
+      note,
+      status: "active",
+    };
+
     void save({
       ...data,
-      debts: [...data.debts, { id: crypto.randomUUID(), name, direction: direction === "owed" ? "owed" : "owe", initialAmount: amount, note: String(form.get("note")).trim(), status: "active" }],
+      debts: [...data.debts, newDebt],
+      entries: nextEntries,
     });
-    setMessage("Hutang dicatat. Saldo dompet tidak berubah.");
+    setMessage(
+      direction === "owed" && sourceWalletId !== "outside"
+        ? "Piutang dicatat dan saldo dompet dipotong."
+        : "Hutang dicatat. Saldo dompet tidak berubah."
+    );
+  }
+
+  function topUpDebt(form: FormData) {
+    const debt = data.debts.find((item) => item.id === String(form.get("debtId")));
+    const amount = inputNumber(String(form.get("amount")));
+    const walletId = String(form.get("walletId") || "outside");
+    const date = String(form.get("date"));
+    const extraNote = String(form.get("note")).trim();
+
+    if (!debt || debt.status !== "active") {
+      setMessage("Hutang tidak ditemukan atau sudah lunas.");
+      return;
+    }
+    if (amount <= 0) {
+      setMessage("Nominal tambahan harus lebih dari nol.");
+      return;
+    }
+
+    let nextEntries = data.entries;
+    if (debt.direction === "owed" && walletId !== "outside") {
+      if (amount > (balances[walletId] ?? 0)) {
+        setMessage("Nominal melebihi saldo dompet sumber.");
+        return;
+      }
+      nextEntries = [
+        ...nextEntries,
+        {
+          id: crypto.randomUUID(),
+          date,
+          note: `Tambah pinjaman ke ${debt.name}${extraNote ? ` · ${extraNote}` : ""}`,
+          walletId,
+          kind: "expense",
+          amount,
+        },
+      ];
+    }
+
+    const updatedDebt: Debt = {
+      ...debt,
+      initialAmount: debt.initialAmount + amount,
+      note: extraNote ? (debt.note ? `${debt.note}; ${extraNote}` : extraNote) : debt.note,
+    };
+
+    void save({
+      ...data,
+      debts: data.debts.map((d) => (d.id === debt.id ? updatedDebt : d)),
+      entries: nextEntries,
+    });
+    setMessage(`Nominal hutang ${debt.name} ditambah ${amount}.`);
   }
 
   function payDebt(form: FormData) {
@@ -224,36 +353,57 @@ export default function App() {
     const walletId = String(form.get("walletId"));
     const amount = inputNumber(String(form.get("amount")));
     const date = String(form.get("date"));
+
     if (!debt || debt.status !== "active") {
       setMessage("Hutang tidak ditemukan atau sudah lunas.");
       return;
     }
-    const remaining = debt.initialAmount - data.debtPayments.filter((payment) => payment.debtId === debt.id).reduce((sum, payment) => sum + payment.amount, 0);
+    const remaining =
+      debt.initialAmount -
+      data.debtPayments.filter((payment) => payment.debtId === debt.id).reduce((sum, payment) => sum + payment.amount, 0);
+
     if (amount <= 0 || amount > remaining) {
       setMessage("Nominal melebihi sisa hutang.");
       return;
     }
+
     const note = debt.direction === "owe" ? `Bayar hutang ${debt.name}` : `Terima piutang ${debt.name}`;
-    if (debt.direction === "owe") {
-      if (amount > (balances[walletId] ?? 0)) {
-        setMessage("Nominal melebihi saldo dompet sumber.");
-        return;
+    let nextEntries = data.entries;
+
+    if (walletId !== "outside") {
+      if (debt.direction === "owe") {
+        if (amount > (balances[walletId] ?? 0)) {
+          setMessage("Nominal melebihi saldo dompet sumber.");
+          return;
+        }
+        nextEntries = [
+          ...nextEntries,
+          { id: crypto.randomUUID(), date, note, walletId, kind: "expense", amount },
+        ];
+      } else {
+        nextEntries = [
+          ...nextEntries,
+          { id: crypto.randomUUID(), date, note, walletId, kind: "income", amount },
+        ];
       }
-      const paymentId = crypto.randomUUID();
-      void save({
-        ...data,
-        entries: [...data.entries, { id: crypto.randomUUID(), date, note, walletId, kind: "expense", amount }],
-        debtPayments: [...data.debtPayments, { id: paymentId, debtId: debt.id, date, amount, walletId, note }],
-      });
-    } else {
-      const paymentId = crypto.randomUUID();
-      void save({
-        ...data,
-        entries: [...data.entries, { id: crypto.randomUUID(), date, note, walletId, kind: "income", amount }],
-        debtPayments: [...data.debtPayments, { id: paymentId, debtId: debt.id, date, amount, walletId, note }],
-      });
     }
-    setMessage("Pembayaran dicatat ke dompet dan sisa hutang.");
+
+    const paymentId = crypto.randomUUID();
+    const newPayment = {
+      id: paymentId,
+      debtId: debt.id,
+      date,
+      amount,
+      walletId: walletId !== "outside" ? walletId : undefined,
+      note,
+    };
+
+    void save({
+      ...data,
+      entries: nextEntries,
+      debtPayments: [...data.debtPayments, newPayment],
+    });
+    setMessage("Pembayaran dicatat.");
   }
 
   function settleDebt(id: string) {
@@ -261,7 +411,7 @@ export default function App() {
     if (!debt) return;
     if (!window.confirm(`Tandai hutang ${debt.name} sebagai lunas?`)) return;
     void save({ ...data, debts: data.debts.map((item) => (item.id === id ? { ...item, status: "paid" as const } : item)) });
-    setMessage("Hutang ditandai lunas. Riwayat pembayaran tetap tersimpan.");
+    setMessage("Hutang ditandai lunas.");
   }
 
   async function deleteDebt(id: string) {
@@ -281,20 +431,132 @@ export default function App() {
     }
   }
 
-  async function deleteIncomeType(id: string) {
-    if (data.allocations.some((log) => log.incomeTypeId === id)) {
-      setMessage("Tipe tidak bisa dihapus karena sudah dipakai pada riwayat pemasukan.");
+  // --- ASSETS ---
+  function addAsset(form: FormData) {
+    const name = String(form.get("name")).trim();
+    const category = String(form.get("category")) as Asset["category"];
+    const buyPrice = inputNumber(String(form.get("buyPrice")));
+    const buyWalletId = String(form.get("buyWalletId") || "outside");
+    const buyDate = String(form.get("buyDate"));
+    const note = String(form.get("note")).trim();
+
+    if (!name) {
+      setMessage("Nama aset wajib diisi.");
       return;
     }
-    if (!window.confirm("Hapus tipe alokasi ini?")) return;
-    const next = { ...data, incomeTypes: data.incomeTypes.filter((item) => item.id !== id) };
+    if (buyPrice <= 0) {
+      setMessage("Harga beli harus lebih dari nol.");
+      return;
+    }
+
+    let nextEntries = data.entries;
+    if (buyWalletId !== "outside") {
+      if (buyPrice > (balances[buyWalletId] ?? 0)) {
+        setMessage("Harga beli melebihi saldo dompet sumber.");
+        return;
+      }
+      nextEntries = [
+        ...nextEntries,
+        {
+          id: crypto.randomUUID(),
+          date: buyDate,
+          note: `Beli aset: ${name}`,
+          walletId: buyWalletId,
+          kind: "expense",
+          amount: buyPrice,
+        },
+      ];
+    }
+
+    const newAsset: Asset = {
+      id: crypto.randomUUID(),
+      name,
+      category,
+      buyPrice,
+      currentPrice: buyPrice,
+      buyDate,
+      status: "active",
+      buyWalletId: buyWalletId !== "outside" ? buyWalletId : undefined,
+      note,
+    };
+
+    void save({
+      ...data,
+      assets: [newAsset, ...data.assets],
+      entries: nextEntries,
+    });
+    setMessage("Aset baru dicatat.");
+  }
+
+  function updateAssetPrice(id: string, newPrice: number) {
+    if (newPrice < 0) {
+      setMessage("Nilai aset tidak boleh negatif.");
+      return;
+    }
+    void save({
+      ...data,
+      assets: data.assets.map((a) => (a.id === id ? { ...a, currentPrice: newPrice } : a)),
+    });
+    setMessage("Nilai kini aset diperbarui.");
+  }
+
+  function sellAsset(form: FormData) {
+    const assetId = String(form.get("assetId"));
+    const sellPrice = inputNumber(String(form.get("sellPrice")));
+    const sellWalletId = String(form.get("sellWalletId") || "outside");
+    const sellDate = String(form.get("sellDate"));
+
+    const asset = data.assets.find((a) => a.id === assetId);
+    if (!asset || asset.status === "sold") {
+      setMessage("Aset tidak ditemukan atau sudah terjual.");
+      return;
+    }
+    if (sellPrice < 0) {
+      setMessage("Harga jual tidak boleh negatif.");
+      return;
+    }
+
+    let nextEntries = data.entries;
+    if (sellWalletId !== "outside" && sellPrice > 0) {
+      nextEntries = [
+        ...nextEntries,
+        {
+          id: crypto.randomUUID(),
+          date: sellDate,
+          note: `Jual aset: ${asset.name}`,
+          walletId: sellWalletId,
+          kind: "income",
+          amount: sellPrice,
+        },
+      ];
+    }
+
+    const updatedAsset: Asset = {
+      ...asset,
+      status: "sold",
+      sellPrice,
+      sellDate,
+      sellWalletId: sellWalletId !== "outside" ? sellWalletId : undefined,
+    };
+
+    void save({
+      ...data,
+      assets: data.assets.map((a) => (a.id === asset.id ? updatedAsset : a)),
+      entries: nextEntries,
+    });
+    setMessage("Penjualan aset dicatat.");
+  }
+
+  async function deleteAsset(id: string) {
+    if (!window.confirm("Hapus catatan aset ini?")) return;
+    const next = { ...data, assets: data.assets.filter((a) => a.id !== id) };
     setData(next);
-    const { error } = await supabase.from("income_types").delete().eq("id", id);
+    const { error } = await supabase.from("assets").delete().eq("id", id);
     if (error) {
       setMessage(error.message);
       void refresh();
     } else {
-      setMessage("Tipe dihapus.");
+      setMessage("Aset dihapus.");
     }
   }
 
@@ -326,19 +588,41 @@ export default function App() {
       signOut={() => void supabase.auth.signOut()}
     >
       {view === "dashboard" && (
-        <div className="grid gap-5">
-          <DashboardView data={data} summary={summary} balances={balances} filter={filter} setFilter={setFilter} setModal={setModal} />
-          <section className="rounded-xl border border-line bg-surface p-4 shadow-[0_1px_2px_0_rgb(0_0_0/0.05)]">
-            <h2 className="text-sm font-bold text-ink-900">Budget bulan {currentMonth}</h2>
-            <p className="mb-3 mt-0.5 text-xs text-ink-500">Pagu pengeluaran per dompet. Hanya peringatan, tidak memblokir transaksi.</p>
-            <BudgetSection data={data} month={currentMonth} setBudget={setBudget} />
-          </section>
-        </div>
+        <DashboardView data={data} summary={summary} balances={balances} filter={filter} setFilter={setFilter} setModal={setModal} />
       )}
-      {view === "wallets" && <WalletsView data={data} balances={balances} addWallet={addWallet} updateWallet={updateWallet} deleteWallet={(id) => void deleteWallet(id)} />}
+      {view === "wallets" && (
+        <WalletsView
+          data={data}
+          balances={balances}
+          addWallet={addWallet}
+          updateWallet={updateWallet}
+          deleteWallet={(id) => void deleteWallet(id)}
+          setWalletTarget={(wId, t) => void setWalletTarget(wId, t)}
+        />
+      )}
+      {view === "assets" && (
+        <AssetsView
+          data={data}
+          balances={balances}
+          addAsset={addAsset}
+          updateAssetPrice={updateAssetPrice}
+          sellAsset={sellAsset}
+          deleteAsset={(id) => void deleteAsset(id)}
+        />
+      )}
+      {view === "debts" && (
+        <DebtsView
+          data={data}
+          balances={balances}
+          addDebt={addDebt}
+          topUpDebt={topUpDebt}
+          payDebt={payDebt}
+          settleDebt={settleDebt}
+          deleteDebt={(id) => void deleteDebt(id)}
+        />
+      )}
       {view === "history" && <HistoryView data={data} filter={filter} setFilter={setFilter} />}
       {view === "calendar" && <CalendarView data={data} />}
-      {view === "debts" && <DebtsView data={data} addDebt={addDebt} payDebt={payDebt} settleDebt={settleDebt} deleteDebt={(id) => void deleteDebt(id)} />}
       {view === "settings" && <SettingsView data={data} addIncomeType={addIncomeType} updateIncomeType={updateIncomeType} deleteIncomeType={(id) => void deleteIncomeType(id)} />}
       {modal === "income" && <IncomeModal data={data} onClose={() => setModal(null)} onSubmit={addIncome} />}
       {modal === "expense" && <ExpenseModal data={data} balances={balances} onClose={() => setModal(null)} onSubmit={addExpense} />}

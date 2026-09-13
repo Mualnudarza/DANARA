@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { budgetSpent, budgetStatus, calculateBalances, debtRemaining, debtTotals, groupByDay, isValidAllocation, newTransfer, splitIncome } from "./finance";
-import type { Debt, DebtPayment, IncomeType, LedgerEntry, Wallet } from "./types";
+import { activeAssetsTotal, assetPL, calculateBalances, debtRemaining, debtTotals, groupByDay, isValidAllocation, newTransfer, splitIncome, targetProgress, walletTargetLookup } from "./finance";
+import type { Asset, Debt, DebtPayment, IncomeType, LedgerEntry, Wallet, WalletTarget } from "./types";
 
 const wallets: Wallet[] = [{ id: "a", name: "A", account: "BCA", color: "#000" }, { id: "b", name: "B", account: "BCA", color: "#111" }];
 const incomeType: IncomeType = { id: "salary", name: "Salary", allocations: { a: 33, b: 67 } };
@@ -23,17 +23,45 @@ describe("finance", () => {
     expect(debtRemaining(debts[0], payments)).toBe(600);
     expect(debtTotals(debts, payments)).toEqual({ owe: 600, owed: 600, net: 0 });
   });
-  it("menilai status budget aman, waspada, dan jebol", () => {
-    expect(budgetStatus(2000, 1000).status).toBe("safe");
-    expect(budgetStatus(2000, 1700).status).toBe("warning");
-    expect(budgetStatus(2000, 2200)).toMatchObject({ status: "over", remaining: -200 });
+  it("menghitung progres target dompet", () => {
+    expect(targetProgress(900_000, 1_200_000)).toEqual({ pct: 75, rawPct: 75, remaining: 300_000, reached: false });
+    expect(targetProgress(1_500_000, 1_200_000)).toEqual({ pct: 100, rawPct: 125, remaining: 0, reached: true });
+    expect(targetProgress(0, 500_000)).toEqual({ pct: 0, rawPct: 0, remaining: 500_000, reached: false });
   });
-  it("menjumlahkan pengeluaran dompet per bulan", () => {
-    const entries = [
-      { id: "e1", date: "2026-09-05", note: "", walletId: "a", kind: "expense", amount: 300 },
-      { id: "e2", date: "2026-08-05", note: "", walletId: "a", kind: "expense", amount: 900 },
-    ] as LedgerEntry[];
-    expect(budgetSpent(entries, "a", "2026-09")).toBe(300);
+  it("lookup target per wallet", () => {
+    const targets: WalletTarget[] = [
+      { id: "t1", walletId: "a", targetAmount: 1_000_000 },
+      { id: "t2", walletId: "b", targetAmount: 2_000_000 },
+    ];
+    expect(walletTargetLookup(targets)).toEqual({ a: 1_000_000, b: 2_000_000 });
+  });
+  it("menghitung untung rugi aset aktif dan terjual", () => {
+    const activeGold: Asset = {
+      id: "as1",
+      name: "Emas Antam 10g",
+      category: "emas",
+      buyPrice: 10_000_000,
+      currentPrice: 12_500_000,
+      buyDate: "2026-01-01",
+      status: "active",
+      note: "",
+    };
+    expect(assetPL(activeGold)).toEqual({ value: 12_500_000, diff: 2_500_000, pct: 25, isProfit: true });
+
+    const soldStock: Asset = {
+      id: "as2",
+      name: "BBCA",
+      category: "saham",
+      buyPrice: 5_000_000,
+      currentPrice: 5_000_000,
+      sellPrice: 4_500_000,
+      buyDate: "2026-02-01",
+      sellDate: "2026-09-01",
+      status: "sold",
+      note: "",
+    };
+    expect(assetPL(soldStock)).toEqual({ value: 4_500_000, diff: -500_000, pct: -10, isProfit: false });
+    expect(activeAssetsTotal([activeGold, soldStock])).toBe(12_500_000);
   });
   it("mengelompokkan transaksi per hari tanpa parsing zona waktu", () => {
     const entries = [

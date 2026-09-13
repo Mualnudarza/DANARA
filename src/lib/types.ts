@@ -7,6 +7,12 @@ export interface Wallet {
   color: string;
 }
 
+export interface WalletTarget {
+  id: string;
+  walletId: string;
+  targetAmount: number;
+}
+
 export interface IncomeType {
   id: string;
   name: string;
@@ -32,16 +38,6 @@ export interface AllocationLog {
   groupId: string;
 }
 
-export interface FinanceData {
-  wallets: Wallet[];
-  incomeTypes: IncomeType[];
-  entries: LedgerEntry[];
-  allocations: AllocationLog[];
-  debts: Debt[];
-  debtPayments: DebtPayment[];
-  budgets: Budget[];
-}
-
 export type DebtDirection = "owe" | "owed";
 export type DebtStatus = "active" | "paid";
 
@@ -59,18 +55,38 @@ export interface DebtPayment {
   debtId: string;
   date: string;
   amount: number;
-  walletId: string;
+  walletId?: string;
   note: string;
 }
 
-export interface Budget {
+export type AssetCategory = "saham" | "emas" | "properti" | "ternak" | "barang" | "lainnya";
+export type AssetStatus = "active" | "sold";
+
+export interface Asset {
   id: string;
-  walletId: string;
-  month: string;
-  limitAmount: number;
+  name: string;
+  category: AssetCategory;
+  buyPrice: number;
+  currentPrice: number;
+  sellPrice?: number;
+  buyDate: string;
+  sellDate?: string;
+  status: AssetStatus;
+  buyWalletId?: string;
+  sellWalletId?: string;
+  note: string;
 }
 
-export type BudgetStatus = "safe" | "warning" | "over";
+export interface FinanceData {
+  wallets: Wallet[];
+  walletTargets: WalletTarget[];
+  incomeTypes: IncomeType[];
+  entries: LedgerEntry[];
+  allocations: AllocationLog[];
+  debts: Debt[];
+  debtPayments: DebtPayment[];
+  assets: Asset[];
+}
 
 export interface DayAggregate {
   income: number;
@@ -79,7 +95,7 @@ export interface DayAggregate {
   hasTransfer: boolean;
 }
 
-export type View = "dashboard" | "wallets" | "history" | "calendar" | "debts" | "settings";
+export type View = "dashboard" | "wallets" | "history" | "calendar" | "debts" | "assets" | "settings";
 export type ModalKind = "income" | "expense" | "transfer" | "debt" | "debt-payment" | null;
 export type LedgerFilter = "all" | "income" | "expense" | "transfer";
 
