@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danara · Database Schema</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #eb6c36;
+      --color-link:    #2e5aa8;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1.5rem;
+    }
+
+    .frame { max-width: 1260px; width: 100%; }
+
+    .header {
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 1px solid rgba(45,49,66,0.12);
+      padding-bottom: 1rem;
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.6rem, 2.2vw + 0.8rem, 2.2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      background: rgba(45,49,66,0.06);
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      color: var(--color-muted);
+      border: 1px solid rgba(45,49,66,0.12);
+    }
+
+    svg { width: 100%; height: auto; min-width: 1000px; display: block; background: var(--color-paper); border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="header">
+      <div>
+        <p class="eyebrow">Database Specification · Danara Personal Finance</p>
+        <h1>Physical Schema &amp; Relational Foreign Keys</h1>
+      </div>
+      <div class="badge">PostgreSQL 15+ · Row Level Security (RLS)</div>
+    </div>
+
+    <svg viewBox="0 0 1220 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="schema-title schema-desc">
+      <title id="schema-title">Danara Relational Database Schema Diagram</title>
+      <desc id="schema-desc">Physical database schema diagram showing relational tables, columns, SQL types, constraint chips, and column-anchored foreign key connectors.</desc>
+
+      <defs>
+        <pattern id="grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="0.9" fill="rgba(45,49,66,0.08)"/>
+        </pattern>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+        </marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+        </marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+      <rect width="100%" height="100%" fill="url(#grid-dots)" opacity="0.6"/>
+
+      <!-- ================= SCHEMA GROUPINGS ================= -->
+      <!-- Group 1: Core Accounts & Targets -->
+      <rect x="25" y="40" width="310" height="660" rx="8" fill="rgba(45,49,66,0.015)" stroke="rgba(45,49,66,0.12)" stroke-width="0.8" stroke-dasharray="4,4"/>
+      <text x="37" y="55" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" letter-spacing="0.14em">ACCOUNTING &amp; TRANSFERS</text>
+
+      <!-- Group 2: Ledger & Budget Allocations -->
+      <rect x="445" y="40" width="310" height="660" rx="8" fill="rgba(45,49,66,0.015)" stroke="rgba(45,49,66,0.12)" stroke-width="0.8" stroke-dasharray="4,4"/>
+      <text x="457" y="55" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEDGER JOURNAL &amp; SPLITS</text>
+
+      <!-- Group 3: Debts & Assets Subsystem -->
+      <rect x="865" y="40" width="325" height="660" rx="8" fill="rgba(45,49,66,0.015)" stroke="rgba(45,49,66,0.12)" stroke-width="0.8" stroke-dasharray="4,4"/>
+      <text x="877" y="55" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" letter-spacing="0.14em">OBLIGATIONS &amp; WEALTH ASSETS</text>
+
+      <!-- ================= FOREIGN KEY CONNECTORS (Column to Column) ================= -->
+
+      <!-- FK 1: ledger_entries.wallet_id (465, 332) -> wallets.id (285, 100) -->
+      <path d="M 465,332 H 380 Q 372,332 372,324 V 108 Q 372,100 364,100 H 287" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- FK 2: ledger_entries.income_type_id (725, 356) -> income_types.id (725, 100) -->
+      <path d="M 725,356 H 775 Q 783,356 783,348 V 108 Q 783,100 775,100 H 727" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- FK 3: wallet_targets.wallet_id (285, 336) -> wallets.id (285, 108) (destructive cascade) -->
+      <path d="M 285,336 H 335 Q 343,336 343,328 V 116 Q 343,108 335,108 H 287" fill="none" stroke="#eb6c36" stroke-width="1.3" marker-end="url(#arrow-accent)"/>
+
+      <!-- FK 4: debt_payments.debt_id (885, 334) -> debts.id (885, 100) (destructive cascade focal) -->
+      <path d="M 885,334 H 830 Q 822,334 822,326 V 108 Q 822,100 830,100 H 883" fill="none" stroke="#eb6c36" stroke-width="1.3" marker-end="url(#arrow-accent)"/>
+
+      <!-- FK 5: allocation_logs.income_type_id (465, 608) -> income_types.id (465, 100) -->
+      <path d="M 465,608 H 410 Q 402,608 402,600 V 108 Q 402,100 410,100 H 463" fill="none" stroke="#4f5d75" stroke-width="1.1" marker-end="url(#arrow)"/>
+
+      <!-- FK 6: transfers.from_wallet_id (285, 552) -> wallets.id (285, 116) -->
+      <path d="M 285,552 H 355 Q 363,552 363,544 V 124 Q 363,116 355,116 H 287" fill="none" stroke="#4f5d75" stroke-width="1.1" marker-end="url(#arrow)"/>
+
+      <!-- FK 7: assets.buy_wallet_id (885, 696) -> wallets.id (285, 124) -->
+      <!-- Crossing over col 2 at y=485 -->
+      <path d="M 885,696 H 810 Q 802,696 802,688 V 490 Q 802,482 794,482 H 395 Q 387,482 387,474 V 132 Q 387,124 379,124 H 287" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+      <!-- ================= FK REFERENTIAL LABELS ================= -->
+      <rect x="315" y="210" width="115" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="372" y="219" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">ON DELETE RESTRICT</text>
+
+      <rect x="735" y="220" width="112" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="791" y="229" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">ON DELETE SET NULL</text>
+
+      <rect x="290" y="220" width="108" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="344" y="229" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">ON DELETE CASCADE</text>
+
+      <rect x="770" y="210" width="108" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="824" y="219" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">ON DELETE CASCADE</text>
+
+      <!-- ================= TABLE BOXES ================= -->
+
+      <!-- [TABLE 1]: public.wallets -->
+      <rect x="45" y="70" width="240" height="148" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="45" y="70" width="240" height="28" rx="6" fill="rgba(45,49,66,0.04)"/>
+      <rect x="45" y="90" width="240" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="45" y1="98" x2="285" y2="98" stroke="rgba(45,49,66,0.20)" stroke-width="1"/>
+      <text x="57" y="88" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.wallets</text>
+      <rect x="233" y="78" width="40" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="253" y="87" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+
+      <!-- Row: id -->
+      <rect x="45" y="98" width="240" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="57" y="114" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="175" y="106" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="184" y="114.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="273" y="114" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: user_id -->
+      <text x="57" y="138" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">user_id</text>
+      <rect x="175" y="130" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="184" y="138.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="273" y="138" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: name -->
+      <rect x="45" y="146" width="240" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="57" y="162" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">name</text>
+      <rect x="175" y="154" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="184" y="162.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">NN</text>
+      <text x="273" y="162" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">text</text>
+
+      <!-- Row: account -->
+      <text x="57" y="186" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">account</text>
+      <text x="273" y="186" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">text</text>
+
+      <!-- Row: color -->
+      <rect x="45" y="194" width="240" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="57" y="210" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">color</text>
+      <text x="273" y="210" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">text</text>
+
+
+      <!-- [TABLE 2]: public.wallet_targets -->
+      <rect x="45" y="260" width="240" height="124" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="45" y="260" width="240" height="28" rx="6" fill="rgba(45,49,66,0.04)"/>
+      <rect x="45" y="280" width="240" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="45" y1="288" x2="285" y2="288" stroke="rgba(45,49,66,0.20)" stroke-width="1"/>
+      <text x="57" y="278" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.wallet_targets</text>
+      <rect x="233" y="268" width="40" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="253" y="277" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+
+      <!-- Row: id -->
+      <rect x="45" y="288" width="240" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="57" y="304" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="175" y="296" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="184" y="304.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="273" y="304" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: user_id -->
+      <text x="57" y="328" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">user_id</text>
+      <rect x="175" y="320" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="184" y="328.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="273" y="328" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: wallet_id -->
+      <rect x="45" y="336" width="240" height="24" fill="rgba(235,108,54,0.05)"/>
+      <text x="57" y="352" fill="#eb6c36" font-size="11" font-weight="500" font-family="'Geist', sans-serif">wallet_id</text>
+      <rect x="175" y="344" width="18" height="11" rx="2" fill="none" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="184" y="352.5" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="273" y="352" fill="#eb6c36" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: target_amount -->
+      <text x="57" y="376" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">target_amount</text>
+      <text x="273" y="376" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+
+      <!-- [TABLE 3]: public.transfers -->
+      <rect x="45" y="440" width="240" height="196" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="45" y="440" width="240" height="28" rx="6" fill="rgba(45,49,66,0.04)"/>
+      <rect x="45" y="460" width="240" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="45" y1="468" x2="285" y2="468" stroke="rgba(45,49,66,0.20)" stroke-width="1"/>
+      <text x="57" y="458" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.transfers</text>
+      <rect x="233" y="448" width="40" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="253" y="457" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+
+      <!-- Row: id -->
+      <rect x="45" y="468" width="240" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="57" y="484" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="175" y="476" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="184" y="484.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="273" y="484" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: user_id -->
+      <text x="57" y="508" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">user_id</text>
+      <text x="273" y="508" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: group_id -->
+      <rect x="45" y="516" width="240" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="57" y="532" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">group_id</text>
+      <text x="273" y="532" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: from_wallet_id -->
+      <text x="57" y="556" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">from_wallet_id</text>
+      <rect x="175" y="548" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="184" y="556.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="273" y="556" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: to_wallet_id -->
+      <rect x="45" y="564" width="240" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="57" y="580" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">to_wallet_id</text>
+      <rect x="175" y="572" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="184" y="580.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="273" y="580" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: amount -->
+      <text x="57" y="604" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">amount</text>
+      <text x="273" y="604" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+      <!-- Row: date -->
+      <rect x="45" y="612" width="240" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="57" y="628" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">date</text>
+      <text x="273" y="628" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">date</text>
+
+
+      <!-- [TABLE 4]: public.income_types -->
+      <rect x="465" y="70" width="260" height="124" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="465" y="70" width="260" height="28" rx="6" fill="rgba(45,49,66,0.04)"/>
+      <rect x="465" y="90" width="260" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="465" y1="98" x2="725" y2="98" stroke="rgba(45,49,66,0.20)" stroke-width="1"/>
+      <text x="477" y="88" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.income_types</text>
+      <rect x="673" y="78" width="40" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="693" y="87" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+
+      <!-- Row: id -->
+      <rect x="465" y="98" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="114" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="605" y="106" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="614" y="114.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="713" y="114" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: user_id -->
+      <text x="477" y="138" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">user_id</text>
+      <text x="713" y="138" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: name -->
+      <rect x="465" y="146" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="162" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">name</text>
+      <text x="713" y="162" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">text</text>
+
+      <!-- Row: allocations -->
+      <text x="477" y="186" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">allocations</text>
+      <text x="713" y="186" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">jsonb</text>
+
+
+      <!-- [TABLE 5]: public.ledger_entries (FOCAL TABLE #1: Accent Tint Header) -->
+      <rect x="465" y="240" width="260" height="220" rx="6" fill="#ffffff" stroke="#eb6c36" stroke-width="1.3"/>
+      <rect x="465" y="240" width="260" height="28" rx="6" fill="rgba(235,108,54,0.12)"/>
+      <rect x="465" y="260" width="260" height="8" fill="rgba(235,108,54,0.12)"/>
+      <line x1="465" y1="268" x2="725" y2="268" stroke="rgba(235,108,54,0.30)" stroke-width="1"/>
+      <text x="477" y="258" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.ledger_entries</text>
+      <rect x="673" y="248" width="40" height="12" rx="2" fill="none" stroke="rgba(235,108,54,0.60)" stroke-width="0.8"/>
+      <text x="693" y="257" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FOCAL</text>
+
+      <!-- Row: id -->
+      <rect x="465" y="268" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="284" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="605" y="276" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="614" y="284.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="713" y="284" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: user_id -->
+      <text x="477" y="308" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">user_id</text>
+      <text x="713" y="308" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: wallet_id -->
+      <rect x="465" y="316" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="332" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">wallet_id</text>
+      <rect x="605" y="324" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="614" y="332.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="713" y="332" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: income_type_id -->
+      <text x="477" y="356" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">income_type_id</text>
+      <rect x="605" y="348" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="614" y="356.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="713" y="356" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: kind -->
+      <rect x="465" y="364" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="380" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">kind</text>
+      <text x="713" y="380" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">entry_kind</text>
+
+      <!-- Row: amount -->
+      <text x="477" y="404" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">amount</text>
+      <text x="713" y="404" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+      <!-- Row: date -->
+      <rect x="465" y="412" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="428" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">date</text>
+      <text x="713" y="428" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">date</text>
+
+      <!-- Row: group_id -->
+      <text x="477" y="452" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">group_id</text>
+      <text x="713" y="452" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+
+      <!-- [TABLE 6]: public.allocation_logs -->
+      <rect x="465" y="520" width="260" height="148" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="465" y="520" width="260" height="28" rx="6" fill="rgba(45,49,66,0.04)"/>
+      <rect x="465" y="540" width="260" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="465" y1="548" x2="725" y2="548" stroke="rgba(45,49,66,0.20)" stroke-width="1"/>
+      <text x="477" y="538" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.allocation_logs</text>
+      <rect x="673" y="528" width="40" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="693" y="537" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+
+      <!-- Row: id -->
+      <rect x="465" y="548" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="564" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="605" y="556" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="614" y="564.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="713" y="564" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: user_id -->
+      <text x="477" y="588" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">user_id</text>
+      <text x="713" y="588" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: income_type_id -->
+      <rect x="465" y="596" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="612" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">income_type_id</text>
+      <rect x="605" y="604" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="614" y="612.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="713" y="612" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: group_id -->
+      <text x="477" y="636" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">group_id</text>
+      <text x="713" y="636" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: amount -->
+      <rect x="465" y="644" width="260" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="477" y="660" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">amount</text>
+      <text x="713" y="660" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+
+      <!-- [TABLE 7]: public.debts -->
+      <rect x="885" y="70" width="280" height="172" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="885" y="70" width="280" height="28" rx="6" fill="rgba(45,49,66,0.04)"/>
+      <rect x="885" y="90" width="280" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="885" y1="98" x2="1165" y2="98" stroke="rgba(45,49,66,0.20)" stroke-width="1"/>
+      <text x="897" y="88" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.debts</text>
+      <rect x="1113" y="78" width="40" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="1133" y="87" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+
+      <!-- Row: id -->
+      <rect x="885" y="98" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="114" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="1035" y="106" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="1044" y="114.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="1153" y="114" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: user_id -->
+      <text x="897" y="138" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">user_id</text>
+      <text x="1153" y="138" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: name -->
+      <rect x="885" y="146" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="162" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">name</text>
+      <text x="1153" y="162" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">text</text>
+
+      <!-- Row: direction -->
+      <text x="897" y="186" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">direction</text>
+      <text x="1153" y="186" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">debt_dir</text>
+
+      <!-- Row: initial_amount -->
+      <rect x="885" y="194" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="210" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">initial_amount</text>
+      <text x="1153" y="210" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+      <!-- Row: status -->
+      <text x="897" y="234" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">status</text>
+      <text x="1153" y="234" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">debt_status</text>
+
+
+      <!-- [TABLE 8]: public.debt_payments -->
+      <rect x="885" y="270" width="280" height="172" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="885" y="270" width="280" height="28" rx="6" fill="rgba(45,49,66,0.04)"/>
+      <rect x="885" y="290" width="280" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="885" y1="298" x2="1165" y2="298" stroke="rgba(45,49,66,0.20)" stroke-width="1"/>
+      <text x="897" y="288" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.debt_payments</text>
+      <rect x="1113" y="278" width="40" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="1133" y="287" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+
+      <!-- Row: id -->
+      <rect x="885" y="298" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="314" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="1035" y="306" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="1044" y="314.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="1153" y="314" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: debt_id -->
+      <text x="897" y="338" fill="#eb6c36" font-size="11" font-weight="500" font-family="'Geist', sans-serif">debt_id</text>
+      <rect x="1035" y="330" width="18" height="11" rx="2" fill="none" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="1044" y="338.5" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="1153" y="338" fill="#eb6c36" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: wallet_id -->
+      <rect x="885" y="346" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="362" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">wallet_id</text>
+      <rect x="1035" y="354" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="1044" y="362.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="1153" y="362" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: amount -->
+      <text x="897" y="386" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">amount</text>
+      <text x="1153" y="386" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+      <!-- Row: date -->
+      <rect x="885" y="394" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="410" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">date</text>
+      <text x="1153" y="410" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">date</text>
+
+      <!-- Row: note -->
+      <text x="897" y="434" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">note</text>
+      <text x="1153" y="434" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">text</text>
+
+
+      <!-- [TABLE 9]: public.assets -->
+      <rect x="885" y="470" width="280" height="220" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="885" y="470" width="280" height="28" rx="6" fill="rgba(45,49,66,0.04)"/>
+      <rect x="885" y="490" width="280" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="885" y1="498" x2="1165" y2="498" stroke="rgba(45,49,66,0.20)" stroke-width="1"/>
+      <text x="897" y="488" fill="#2d3142" font-size="11.5" font-weight="600" font-family="'Geist', sans-serif">public.assets</text>
+      <rect x="1113" y="478" width="40" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="1133" y="487" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+
+      <!-- Row: id -->
+      <rect x="885" y="498" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="514" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">id</text>
+      <rect x="1035" y="506" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="1044" y="514.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">PK</text>
+      <text x="1153" y="514" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: name -->
+      <text x="897" y="538" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">name</text>
+      <text x="1153" y="538" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">text</text>
+
+      <!-- Row: category -->
+      <rect x="885" y="546" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="562" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">category</text>
+      <text x="1153" y="562" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">asset_cat</text>
+
+      <!-- Row: buy_price -->
+      <text x="897" y="586" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">buy_price</text>
+      <text x="1153" y="586" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+      <!-- Row: current_price -->
+      <rect x="885" y="594" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="610" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">current_price</text>
+      <text x="1153" y="610" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+      <!-- Row: buy_date -->
+      <text x="897" y="634" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">buy_date</text>
+      <text x="1153" y="634" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">date</text>
+
+      <!-- Row: buy_wallet_id -->
+      <rect x="885" y="642" width="280" height="24" fill="rgba(45,49,66,0.02)"/>
+      <text x="897" y="658" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">buy_wallet_id</text>
+      <rect x="1035" y="650" width="18" height="11" rx="2" fill="none" stroke="rgba(45,49,66,0.35)" stroke-width="0.8"/>
+      <text x="1044" y="658.5" fill="#2d3142" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+      <text x="1153" y="658" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+      <!-- Row: status -->
+      <text x="897" y="682" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">status</text>
+      <text x="1153" y="682" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end">asset_status</text>
+
+
+      <!-- ================= FOOTER / LEGEND ================= -->
+      <line x1="25" y1="720" x2="1190" y2="720" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+      <text x="25" y="742" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.16em">SCHEMA CONSTRAINTS &amp; ACTIONS</text>
+
+      <rect x="25" y="753" width="14" height="10" rx="2" fill="rgba(235,108,54,0.12)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="46" y="761" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Aggregate Ledger Focal Table</text>
+
+      <line x1="220" y1="758" x2="245" y2="758" stroke="#eb6c36" stroke-width="1.3" marker-end="url(#arrow-accent)"/>
+      <text x="255" y="761" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">ON DELETE CASCADE</text>
+
+      <line x1="410" y1="758" x2="435" y2="758" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="445" y="761" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">ON DELETE RESTRICT / SET NULL</text>
+
+      <text x="1190" y="761" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">All tables enforce RLS: auth.uid() = user_id</text>
+    </svg>
+  </div>
+</body>
+</html>

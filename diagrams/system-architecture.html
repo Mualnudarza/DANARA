@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danara · System Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #eb6c36;
+      --color-link:    #2e5aa8;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1.5rem;
+    }
+
+    .frame { max-width: 1220px; width: 100%; }
+
+    .header {
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 1px solid rgba(45,49,66,0.12);
+      padding-bottom: 1rem;
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.6rem, 2.2vw + 0.8rem, 2.2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      background: rgba(45,49,66,0.06);
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      color: var(--color-muted);
+      border: 1px solid rgba(45,49,66,0.12);
+    }
+
+    svg { width: 100%; height: auto; min-width: 980px; display: block; background: var(--color-paper); border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="header">
+      <div>
+        <p class="eyebrow">Architecture Specification · Danara Personal Finance</p>
+        <h1>System Architecture & Runtime Data Flow</h1>
+      </div>
+      <div class="badge">Vite · React 19 · TypeScript · Supabase</div>
+    </div>
+
+    <svg viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="arch-title arch-desc">
+      <title id="arch-title">Danara System Architecture Diagram</title>
+      <desc id="arch-desc">Four-tier architecture diagram showing presentation, domain finance logic, data access, and Supabase cloud services.</desc>
+
+      <defs>
+        <pattern id="grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="0.9" fill="rgba(45,49,66,0.08)"/>
+        </pattern>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+        </marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+        </marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/>
+        </marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+      <rect width="100%" height="100%" fill="url(#grid-dots)" opacity="0.6"/>
+
+      <!-- ================= ZONES ================= -->
+      <!-- Zone 1: Presentation Tier -->
+      <rect x="35" y="55" width="240" height="460" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+      <rect x="47" y="50" width="112" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="103" y="60" fill="rgba(45,49,66,0.55)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">PRESENTATION TIER</text>
+
+      <!-- Zone 2: Domain Engine Tier -->
+      <rect x="315" y="55" width="240" height="460" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+      <rect x="327" y="50" width="116" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="385" y="60" fill="rgba(45,49,66,0.55)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">DOMAIN ENGINE (CLIENT)</text>
+
+      <!-- Zone 3: Data Access Layer -->
+      <rect x="595" y="55" width="240" height="460" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+      <rect x="607" y="50" width="108" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="661" y="60" fill="rgba(45,49,66,0.55)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">DATA ACCESS LAYER</text>
+
+      <!-- Zone 4: Cloud Services (Supabase) -->
+      <rect x="875" y="55" width="285" height="460" rx="8" fill="rgba(45,49,66,0.025)" stroke="rgba(45,49,66,0.18)" stroke-width="0.9" stroke-dasharray="5,4"/>
+      <rect x="887" y="50" width="128" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="951" y="60" fill="rgba(45,49,66,0.65)" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">SUPABASE CLOUD INFRA</text>
+
+      <!-- ================= CONNECTORS (ARROWS) ================= -->
+      <!-- User to Views -->
+      <line x1="155" y1="160" x2="155" y2="198" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Modals to State (Dispatch Action) -->
+      <path d="M 235,395 H 280 Q 288,395 288,387 V 148 Q 288,140 296,140 H 333" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Views to State (Read state / trigger mutation) -->
+      <line x1="235" y1="235" x2="333" y2="235" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- State to Finance Engine (Calculate balances, allocations) -->
+      <line x1="435" y1="180" x2="435" y2="228" stroke="#eb6c36" stroke-width="1.3" marker-end="url(#arrow-accent)"/>
+
+      <!-- Finance Engine return to State (Derived Metrics) -->
+      <path d="M 455,230 V 185" fill="none" stroke="#eb6c36" stroke-width="1.1" stroke-dasharray="3,3" marker-end="url(#arrow-accent)"/>
+
+      <!-- State to Aggregator -->
+      <path d="M 390,180 V 380 Q 390,388 398,388 H 413" fill="none" stroke="#4f5d75" stroke-width="1.1" marker-end="url(#arrow)"/>
+
+      <!-- State to Supabase Client (loadFinanceData / upsertFinanceData) -->
+      <line x1="535" y1="140" x2="613" y2="140" stroke="#2e5aa8" stroke-width="1.3" marker-end="url(#arrow-link)"/>
+
+      <!-- Supabase Client to Batch Operations -->
+      <line x1="715" y1="180" x2="715" y2="228" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Auth Listener to State (Session change dispatch) -->
+      <path d="M 615,405 H 555 Q 547,405 547,397 V 160 Q 547,152 539,152 H 535" fill="none" stroke="#4f5d75" stroke-width="1.1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+      <!-- Supabase Client to GoTrue (Auth API) -->
+      <line x1="815" y1="130" x2="893" y2="130" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+      <!-- Batch Operations to PostgreSQL (REST API / PostgREST) -->
+      <line x1="815" y1="270" x2="893" y2="270" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+      <!-- PostgreSQL to RLS (Policy Enforcement) -->
+      <line x1="1020" y1="320" x2="1020" y2="368" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Auth to RLS (JWT Context auth.uid()) -->
+      <path d="M 1020,165 V 205 Q 1020,210 1028,210 H 1115 Q 1125,210 1125,218 V 390 Q 1125,398 1115,398 H 1102" fill="none" stroke="#2e5aa8" stroke-width="1.1" stroke-dasharray="4,3" marker-end="url(#arrow-link)"/>
+
+      <!-- ================= CONNECTOR LABELS ================= -->
+      <rect x="245" y="226" width="70" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="280" y="235" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">USE MEMO</text>
+
+      <rect x="444" y="196" width="60" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="474" y="205" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">DERIVED KPI</text>
+
+      <rect x="546" y="131" width="55" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="573" y="140" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">ASYNC API</text>
+
+      <rect x="827" y="121" width="52" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="853" y="130" fill="#2e5aa8" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">AUTH JWT</text>
+
+      <rect x="826" y="261" width="56" height="13" rx="2" fill="#f5f5f5"/>
+      <text x="854" y="270" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle">UPSERT BATCH</text>
+
+      <!-- ================= NODES ================= -->
+
+      <!-- [NODE 1]: User / Web Browser -->
+      <rect x="55" y="90" width="200" height="70" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="63" y="98" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="80" y="107" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CLIENT</text>
+      <text x="155" y="125" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">User Browser</text>
+      <text x="155" y="142" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">SPA Session · Responsive UI</text>
+
+      <!-- [NODE 2]: App Layout & Navigation -->
+      <rect x="55" y="200" width="200" height="95" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="63" y="208" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="77" y="217" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">VIEW</text>
+      <text x="155" y="232" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">AppLayout &amp; 7 Views</text>
+      <text x="155" y="250" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">Dashboard · Wallets · History</text>
+      <text x="155" y="265" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">Calendar · Debts · Assets · Settings</text>
+      <text x="155" y="280" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Tailwind CSS 4 + Lucide</text>
+
+      <!-- [NODE 3]: Transaction Modals -->
+      <rect x="55" y="340" width="200" height="90" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="63" y="348" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="80" y="357" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MODAL</text>
+      <text x="155" y="375" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Transaction Modals</text>
+      <text x="155" y="394" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">Income Split · Expense · Transfer</text>
+      <text x="155" y="410" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Debt Repay · Asset Buy/Sell</text>
+
+      <!-- [NODE 4]: React Root State (App.tsx) -->
+      <rect x="335" y="100" width="200" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="343" y="108" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="359" y="117" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+      <text x="435" y="134" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">React Root State</text>
+      <text x="435" y="152" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">App.tsx · Optimistic UI Updates</text>
+      <text x="435" y="167" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FinanceData entity cache</text>
+
+      <!-- [NODE 5]: Finance Logic Engine (Focal Node #1: Coral) -->
+      <rect x="335" y="230" width="200" height="105" rx="6" fill="#f5f5f5"/>
+      <rect x="335" y="230" width="200" height="105" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1.4"/>
+      <rect x="343" y="238" width="32" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="359" y="247" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+      <text x="435" y="266" fill="#2d3142" font-size="12.5" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Finance Engine</text>
+      <text x="435" y="284" fill="#eb6c36" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">src/lib/finance.ts</text>
+      <text x="435" y="302" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">splitIncome() · calculateBalances()</text>
+      <text x="435" y="318" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">dashboardSummary() · newTransfer()</text>
+
+      <!-- [NODE 6]: Day & Metric Aggregator -->
+      <rect x="335" y="380" width="200" height="75" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="343" y="388" width="30" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="358" y="397" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CALC</text>
+      <text x="435" y="415" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Calendar Aggregator</text>
+      <text x="435" y="432" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">aggregateByDay() · month totals</text>
+      <text x="435" y="446" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Ledger heatmap matrix</text>
+
+      <!-- [NODE 7]: Supabase Client -->
+      <rect x="615" y="100" width="200" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="623" y="108" width="30" height="12" rx="2" fill="transparent" stroke="rgba(46,90,168,0.40)" stroke-width="0.8"/>
+      <text x="638" y="117" fill="#2e5aa8" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SDK</text>
+      <text x="715" y="134" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Supabase Client</text>
+      <text x="715" y="152" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">@supabase/supabase-js</text>
+      <text x="715" y="167" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">src/lib/supabase.ts</text>
+
+      <!-- [NODE 8]: Batch Load & Upsert Pipeline -->
+      <rect x="615" y="230" width="200" height="95" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="623" y="238" width="34" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="640" y="247" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BATCH</text>
+      <text x="715" y="264" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Batch Data Sync</text>
+      <text x="715" y="282" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">loadFinanceData(): Promise.all(8)</text>
+      <text x="715" y="297" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">upsertFinanceData(): multi-table sync</text>
+      <text x="715" y="312" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Transfers pairing synthesis</text>
+
+      <!-- [NODE 9]: Auth State Listener -->
+      <rect x="615" y="370" width="200" height="75" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="623" y="378" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="637" y="387" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">AUTH</text>
+      <text x="715" y="405" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Auth Listener</text>
+      <text x="715" y="423" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif" text-anchor="middle">onAuthStateChange()</text>
+      <text x="715" y="437" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Reactive session handshake</text>
+
+      <!-- [NODE 10]: GoTrue Auth Server -->
+      <rect x="895" y="100" width="245" height="70" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="903" y="108" width="44" height="12" rx="2" fill="transparent" stroke="rgba(46,90,168,0.40)" stroke-width="0.8"/>
+      <text x="925" y="117" fill="#2e5aa8" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GOTRUE</text>
+      <text x="1017" y="128" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Supabase Auth (GoTrue)</text>
+      <text x="1017" y="146" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">auth.users · JWT Provider</text>
+
+      <!-- [NODE 11]: PostgreSQL Database (Focal Node #2: DB Core) -->
+      <rect x="895" y="220" width="245" height="100" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1.2"/>
+      <rect x="895" y="220" width="245" height="26" rx="6" fill="rgba(45,49,66,0.04)" stroke="none"/>
+      <rect x="895" y="238" width="245" height="8" fill="rgba(45,49,66,0.04)"/>
+      <line x1="895" y1="246" x2="1140" y2="246" stroke="rgba(45,49,66,0.18)" stroke-width="1"/>
+      <rect x="903" y="227" width="28" height="12" rx="2" fill="none" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="917" y="236" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SQL</text>
+      <text x="1017" y="237" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">PostgreSQL Database</text>
+      <text x="1017" y="267" fill="#2d3142" font-size="11" font-weight="500" font-family="'Geist', sans-serif" text-anchor="middle">9 Core Application Tables</text>
+      <text x="1017" y="285" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">wallets · entries · debts · assets</text>
+      <text x="1017" y="302" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">targets · income_types · transfers</text>
+
+      <!-- [NODE 12]: Row Level Security (RLS) -->
+      <rect x="895" y="370" width="245" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="903" y="378" width="44" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="925" y="387" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SECURE</text>
+      <text x="1017" y="398" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Row Level Security (RLS)</text>
+      <text x="1017" y="416" fill="#4f5d75" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">user_id = auth.uid()</text>
+      <text x="1017" y="432" fill="#7a8399" font-size="8" font-family="'Geist', sans-serif" text-anchor="middle">Enforced on all tables per tenant</text>
+
+      <!-- ================= FOOTER / LEGEND ================= -->
+      <line x1="35" y1="540" x2="1160" y2="540" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+      <text x="35" y="565" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.16em">LEGEND &amp; CALLOUTS</text>
+
+      <rect x="35" y="578" width="14" height="10" rx="2" fill="rgba(235,108,54,0.10)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="56" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Domain Calculation Core</text>
+
+      <line x1="220" y1="583" x2="245" y2="583" stroke="#2e5aa8" stroke-width="1.4" marker-end="url(#arrow-link)"/>
+      <text x="255" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Auth &amp; Network Ingress</text>
+
+      <line x1="410" y1="583" x2="435" y2="583" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <text x="445" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Primary Data Upsert Pipeline</text>
+
+      <line x1="630" y1="583" x2="655" y2="583" stroke="#4f5d75" stroke-width="1.1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="665" y="586" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Async Event / Derived Feedback</text>
+
+      <text x="1160" y="586" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">Danara v0.1.0 · Clean Architecture</text>
+    </svg>
+  </div>
+</body>
+</html>

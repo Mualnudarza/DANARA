@@ -42,17 +42,19 @@ export default function AssetsView({
   const totalPLPct = totalBuyActive > 0 ? Math.round((totalPL / totalBuyActive) * 100) : 0;
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4 sm:gap-5">
       {/* Summary KPI */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
         <SummaryCard label="Total nilai aset" value={rupiah.format(totalCurrentActive)} hint={`${active.length} aset aktif`} tone="in" />
-        <SummaryCard label="Modal beli" value={rupiah.format(totalBuyActive)} hint="Total harga beli aset aktif" tone="neutral" />
-        <SummaryCard
-          label="Keuntungan / Kerugian"
-          value={`${totalPL >= 0 ? "+" : ""}${rupiah.format(totalPL)} (${totalPLPct}%)`}
-          hint="Perubahan nilai aset aktif saat ini"
-          tone={totalPL >= 0 ? "in" : "out"}
-        />
+        <SummaryCard label="Modal beli" value={rupiah.format(totalBuyActive)} hint="Total harga beli" tone="neutral" />
+        <div className="col-span-2 sm:col-span-1">
+          <SummaryCard
+            label="Keuntungan / Kerugian"
+            value={`${totalPL >= 0 ? "+" : ""}${rupiah.format(totalPL)} (${totalPLPct}%)`}
+            hint="Perubahan nilai aset"
+            tone={totalPL >= 0 ? "in" : "out"}
+          />
+        </div>
       </div>
 
       {/* Active Assets */}

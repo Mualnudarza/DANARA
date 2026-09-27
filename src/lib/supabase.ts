@@ -4,6 +4,13 @@ import type { FinanceData } from "./types";
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  },
 );
 
 export async function loadFinanceData(): Promise<FinanceData> {

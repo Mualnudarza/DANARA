@@ -21,20 +21,24 @@ export default function DashboardView({ data, summary, balances, filter, setFilt
   const debt = debtTotals(data.debts, data.debtPayments);
 
   return (
-    <div className="grid gap-5">
-      {/* 6 KPI Cards in 2 rows */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <MetricCard label="Total saldo" value={rupiah.format(summary.totalBalance)} hint="Akumulasi semua dompet" />
-        <MetricCard label="Masuk bulan ini" value={rupiah.format(summary.monthIncome)} tone="in" hint="Dana masuk eksternal" />
-        <MetricCard label="Keluar bulan ini" value={rupiah.format(summary.monthExpense)} tone="out" hint="Dana keluar eksternal" />
-        <MetricCard label="Net bulan ini" value={rupiah.format(summary.monthIncome - summary.monthExpense)} hint="Masuk dikurangi keluar" />
+    <div className="grid gap-4 sm:gap-5">
+      {/* 6 KPI Cards: mobile 2-col, Total Saldo full-width */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+        <div className="col-span-2 sm:col-span-2 lg:col-span-1">
+          <MetricCard label="Total saldo" value={rupiah.format(summary.totalBalance)} hint="Akumulasi semua dompet" prominent />
+        </div>
+        <MetricCard label="Masuk bulan ini" value={rupiah.format(summary.monthIncome)} tone="in" hint="Dana masuk" />
+        <MetricCard label="Keluar bulan ini" value={rupiah.format(summary.monthExpense)} tone="out" hint="Dana keluar" />
+        <MetricCard label="Net bulan ini" value={rupiah.format(summary.monthIncome - summary.monthExpense)} hint="Masuk − keluar" />
         <MetricCard label="Total aset" value={rupiah.format(totalAssets)} tone="in" hint={`${data.assets.filter((a) => a.status === "active").length} aset aktif`} />
-        <MetricCard
-          label="Hutang bersih"
-          value={rupiah.format(debt.net)}
-          tone={debt.net >= 0 ? "in" : "out"}
-          hint={`Hutangku ${rupiah.format(debt.owe)} · Piutang ${rupiah.format(debt.owed)}`}
-        />
+        <div className="col-span-2 sm:col-span-1 lg:col-span-1">
+          <MetricCard
+            label="Hutang bersih"
+            value={rupiah.format(debt.net)}
+            tone={debt.net >= 0 ? "in" : "out"}
+            hint={`Hutang ${rupiah.format(debt.owe)} · Piutang ${rupiah.format(debt.owed)}`}
+          />
+        </div>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.55fr_0.85fr]">

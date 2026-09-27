@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase, loadFinanceData } from "./lib/supabase";
+import { supabase, loadFinanceData, upsertFinanceData } from "./lib/supabase";
 import { calculateBalances, dashboardSummary, isValidAllocation, newTransfer, splitIncome } from "./lib/finance";
+import { loadLocalData, saveLocalData } from "./lib/storage";
 import type { Asset, Debt, FinanceData, IncomeType, LedgerFilter, ModalKind, View, Wallet } from "./lib/types";
+import type { UserLike } from "./components/layout/types";
 import type { User } from "@supabase/supabase-js";
 import AppLayout from "./components/layout/AppLayout";
 import DashboardView from "./components/views/DashboardView";
@@ -13,33 +15,39 @@ import DebtsView from "./components/views/DebtsView";
 import SettingsView from "./components/views/SettingsView";
 import { ExpenseModal, IncomeModal, TransferModal } from "./components/forms/TransactionModals";
 
+const guestUser: UserLike = {
+  email: "Mode Lokal (Offline)",
+  isLocal: true,
+  user_metadata: { full_name: "Pengguna Lokal" },
+};
+
 function inputNumber(value: string) {
   return Number(value.replace(/\D/g, "")) || 0;
 }
 
 export default function App() {
-  const [data, setData] = useState<FinanceData>({
-    wallets: [],
-    walletTargets: [],
-    incomeTypes: [],
-    entries: [],
-    allocations: [],
-    debts: [],
-    debtPayments: [],
-    assets: [],
-  });
+  const [data, setData] = useState<FinanceData>(loadLocalData);
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<View>("dashboard");
   const [modal, setModal] = useState<ModalKind>(null);
   const [filter, setFilter] = useState<LedgerFilter>("all");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const activeUser: UserLike = user
+    ? { email: user.email, isLocal: false, user_metadata: user.user_metadata }
+    : guestUser;
+
   const summary = useMemo(() => dashboardSummary(data.wallets, data.entries), [data]);
   const balances = useMemo(() => calculateBalances(data.wallets, data.entries), [data]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUser(data.user);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -50,13 +58,25 @@ export default function App() {
   }, [user]);
 
   async function refresh() {
+    if (!user) {
+      setData(loadLocalData());
+      setMessage("Data lokal termuat.");
+      return;
+    }
     try {
       setBusy(true);
       setMessage("");
-      setData(await loadFinanceData());
-      setMessage("Data terbaru dimuat dari Supabase.");
+      const remoteData = await loadFinanceData();
+      if (remoteData.wallets.length === 0 && data.wallets.length > 0) {
+        await upsertFinanceData(data);
+        setMessage("Data lokal disinkronkan ke akun Google.");
+      } else {
+        setData(remoteData);
+        saveLocalData(remoteData);
+        setMessage("Data terbaru dimuat dari Supabase.");
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Gagal memuat data.");
+      setMessage(error instanceof Error ? error.message : "Gagal memuat data cloud.");
     } finally {
       setBusy(false);
     }
@@ -64,14 +84,27 @@ export default function App() {
 
   async function save(next: FinanceData) {
     setData(next);
+    saveLocalData(next);
     setModal(null);
     if (!user) return;
     try {
-      const { upsertFinanceData: fn } = await import("./lib/supabase");
-      await fn(next);
+      await upsertFinanceData(next);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Gagal menyimpan.");
+      setMessage(error instanceof Error ? error.message : "Gagal menyelaraskan ke cloud.");
     }
+  }
+
+  function signInWithGoogle() {
+    void supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${location.origin}${import.meta.env.BASE_URL}` },
+    });
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setMessage("Beralih ke mode lokal.");
   }
 
   function addIncome(form: FormData) {
@@ -165,6 +198,11 @@ export default function App() {
       walletTargets: data.walletTargets.filter((item) => item.walletId !== id),
     };
     setData(next);
+    saveLocalData(next);
+    if (!user) {
+      setMessage("Dompet dihapus.");
+      return;
+    }
     const { error } = await supabase.from("wallets").delete().eq("id", id);
     if (error) {
       setMessage(error.message);
@@ -176,10 +214,13 @@ export default function App() {
 
   async function setWalletTarget(walletId: string, targetAmount: number) {
     if (targetAmount <= 0) {
-      // Delete target if cleared
       const nextTargets = data.walletTargets.filter((t) => t.walletId !== walletId);
-      setData({ ...data, walletTargets: nextTargets });
-      await supabase.from("wallet_targets").delete().eq("wallet_id", walletId);
+      const next = { ...data, walletTargets: nextTargets };
+      setData(next);
+      saveLocalData(next);
+      if (user) {
+        await supabase.from("wallet_targets").delete().eq("wallet_id", walletId);
+      }
       setMessage("Target dompet dihapus.");
       return;
     }
@@ -229,6 +270,11 @@ export default function App() {
     if (!window.confirm("Hapus tipe alokasi ini?")) return;
     const next = { ...data, incomeTypes: data.incomeTypes.filter((item) => item.id !== id) };
     setData(next);
+    saveLocalData(next);
+    if (!user) {
+      setMessage("Tipe dihapus.");
+      return;
+    }
     const { error } = await supabase.from("income_types").delete().eq("id", id);
     if (error) {
       setMessage(error.message);
@@ -422,6 +468,11 @@ export default function App() {
     if (!window.confirm("Hapus catatan hutang ini?")) return;
     const next = { ...data, debts: data.debts.filter((item) => item.id !== id) };
     setData(next);
+    saveLocalData(next);
+    if (!user) {
+      setMessage("Hutang dihapus.");
+      return;
+    }
     const { error } = await supabase.from("debts").delete().eq("id", id);
     if (error) {
       setMessage(error.message);
@@ -551,6 +602,11 @@ export default function App() {
     if (!window.confirm("Hapus catatan aset ini?")) return;
     const next = { ...data, assets: data.assets.filter((a) => a.id !== id) };
     setData(next);
+    saveLocalData(next);
+    if (!user) {
+      setMessage("Aset dihapus.");
+      return;
+    }
     const { error } = await supabase.from("assets").delete().eq("id", id);
     if (error) {
       setMessage(error.message);
@@ -560,32 +616,19 @@ export default function App() {
     }
   }
 
-  if (!user)
-    return (
-      <div className="grid min-h-screen place-items-center bg-canvas px-4">
-        <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-8 text-center shadow-sm">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-ink-500">Manajemen keuangan personal</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900">Danara</h1>
-          <p className="mt-2 text-sm text-ink-500">Masuk untuk mengelola dompet dan alokasi dana.</p>
-          <button className="mt-6 w-full rounded-lg bg-ink-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-ink-700" onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${location.origin}${import.meta.env.BASE_URL}` } })}>
-            Masuk dengan Google
-          </button>
-        </div>
-      </div>
-    );
-
   return (
     <AppLayout
       view={view}
       setView={setView}
       setModal={setModal}
-      user={user}
+      user={activeUser}
       totalBalance={summary.totalBalance}
       busy={busy}
       message={message}
       clearMessage={() => setMessage("")}
       refresh={() => void refresh()}
-      signOut={() => void supabase.auth.signOut()}
+      signOut={() => void handleSignOut()}
+      signInGoogle={signInWithGoogle}
     >
       {view === "dashboard" && (
         <DashboardView data={data} summary={summary} balances={balances} filter={filter} setFilter={setFilter} setModal={setModal} />
@@ -623,7 +666,17 @@ export default function App() {
       )}
       {view === "history" && <HistoryView data={data} filter={filter} setFilter={setFilter} />}
       {view === "calendar" && <CalendarView data={data} />}
-      {view === "settings" && <SettingsView data={data} addIncomeType={addIncomeType} updateIncomeType={updateIncomeType} deleteIncomeType={(id) => void deleteIncomeType(id)} />}
+      {view === "settings" && (
+        <SettingsView
+          data={data}
+          user={activeUser}
+          addIncomeType={addIncomeType}
+          updateIncomeType={updateIncomeType}
+          deleteIncomeType={(id) => void deleteIncomeType(id)}
+          signInGoogle={signInWithGoogle}
+          signOut={() => void handleSignOut()}
+        />
+      )}
       {modal === "income" && <IncomeModal data={data} onClose={() => setModal(null)} onSubmit={addIncome} />}
       {modal === "expense" && <ExpenseModal data={data} balances={balances} onClose={() => setModal(null)} onSubmit={addExpense} />}
       {modal === "transfer" && <TransferModal data={data} balances={balances} onClose={() => setModal(null)} onSubmit={transfer} />}

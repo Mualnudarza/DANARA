@@ -30,11 +30,13 @@ export default function DebtsView({
   const paid = data.debts.filter((debt) => debt.status === "paid");
 
   return (
-    <div className="grid gap-5">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <SummaryCard label="Hutangku" value={rupiah.format(totals.owe)} hint="Sisa yang harus kubayar" tone="out" />
-        <SummaryCard label="Piutangku" value={rupiah.format(totals.owed)} hint="Sisa yang harus kembali" tone="in" />
-        <SummaryCard label="Bersih" value={rupiah.format(totals.net)} hint="Piutang dikurangi hutang" tone="neutral" />
+    <div className="grid gap-4 sm:gap-5">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        <SummaryCard label="Hutangku" value={rupiah.format(totals.owe)} hint="Sisa harus kubayar" tone="out" />
+        <SummaryCard label="Piutangku" value={rupiah.format(totals.owed)} hint="Sisa harus kembali" tone="in" />
+        <div className="col-span-2 sm:col-span-1">
+          <SummaryCard label="Bersih" value={rupiah.format(totals.net)} hint="Piutang − hutang" tone="neutral" />
+        </div>
       </div>
 
       <section className="rounded-xl border border-line bg-surface p-4 shadow-[0_1px_2px_0_rgb(0_0_0/0.05)]">

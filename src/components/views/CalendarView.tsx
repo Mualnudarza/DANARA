@@ -27,14 +27,14 @@ export default function CalendarView({ data }: { data: FinanceData }) {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-      <section className="rounded-xl border border-line bg-surface p-4 shadow-[0_1px_2px_0_rgb(0_0_0/0.05)]">
+    <div className="grid gap-4 sm:gap-5 lg:grid-cols-[1.4fr_1fr]">
+      <section className="rounded-xl border border-line bg-surface p-3 shadow-[0_1px_2px_0_rgb(0_0_0/0.05)] sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <button onClick={() => shift(-1)} aria-label="Bulan sebelumnya" className="rounded-lg border border-line p-1.5 hover:bg-slate-50"><ChevronLeft size={16} /></button>
           <h2 className="text-sm font-bold capitalize text-ink-900">{label}</h2>
           <button onClick={() => shift(1)} aria-label="Bulan berikutnya" className="rounded-lg border border-line p-1.5 hover:bg-slate-50"><ChevronRight size={16} /></button>
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase text-ink-500">
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase text-ink-500 sm:text-[11px]">
           {DAYS.map((day) => <span key={day} className="py-1">{day}</span>)}
         </div>
         <div className="grid grid-cols-7 gap-1">
@@ -48,17 +48,17 @@ export default function CalendarView({ data }: { data: FinanceData }) {
               <button
                 key={key}
                 onClick={() => setSelected(key)}
-                className={`min-h-16 rounded-lg border p-1.5 text-left transition-colors sm:min-h-20 ${isSelected ? "border-ink-900 bg-slate-50" : "border-line bg-surface hover:bg-slate-50"} ${isToday ? "ring-1 ring-ink-900" : ""}`}
+                className={`min-h-11 rounded-lg border p-1 text-left transition-colors sm:min-h-16 sm:p-1.5 ${isSelected ? "border-ink-900 bg-slate-50" : "border-line bg-surface hover:bg-slate-50"} ${isToday ? "ring-1 ring-ink-900" : ""}`}
               >
                 <span className={`tabular text-xs font-bold ${isToday ? "text-ink-900" : "text-ink-500"}`}>{day}</span>
                 {agg ? (
-                  <span className="mt-1 hidden flex-col gap-0.5 sm:flex">
+                  <span className="mt-0.5 hidden flex-col gap-0.5 sm:flex">
                     {agg.income > 0 && <strong className="tabular truncate text-[11px] text-flow-in-text">+{rupiah.format(agg.income)}</strong>}
                     {agg.expense > 0 && <strong className="tabular truncate text-[11px] text-flow-out-text">−{rupiah.format(agg.expense)}</strong>}
                     {agg.hasTransfer && <span className="text-[10px] font-semibold text-flow-move-text">⇄ transfer</span>}
                   </span>
                 ) : (
-                  <span className="mt-1 hidden text-[10px] text-slate-300 sm:block">—</span>
+                  <span className="mt-0.5 hidden text-[10px] text-slate-300 sm:block">—</span>
                 )}
                 {agg && <span className="mt-1 flex gap-1 sm:hidden">{agg.income > 0 && <i className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}{agg.expense > 0 && <i className="h-1.5 w-1.5 rounded-full bg-rose-500" />}{agg.hasTransfer && <i className="h-1.5 w-1.5 rounded-full bg-indigo-500" />}</span>}
               </button>
@@ -67,7 +67,7 @@ export default function CalendarView({ data }: { data: FinanceData }) {
         </div>
       </section>
 
-      <section className="h-fit rounded-xl border border-line bg-surface p-4">
+      <section className="h-fit rounded-xl border border-line bg-surface p-3 sm:p-4">
         <h2 className="text-sm font-bold text-ink-900">Transaksi {selected}</h2>
         <p className="mt-0.5 text-xs text-ink-500">{selectedEntries.length ? `${selectedEntries.length} transaksi` : "Tidak ada transaksi."}</p>
         {selectedEntries.length > 0 && (

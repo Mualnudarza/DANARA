@@ -13,14 +13,15 @@ export function Empty({ label }: { label: string }) {
 
 export function ModalShell({ title, subtitle, children, onClose }: { title: string; subtitle?: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink-900/40 p-4 backdrop-blur-[2px]" role="presentation" onClick={onClose}>
-      <section className="w-full max-w-md rounded-xl border border-line bg-surface p-5 shadow-xl" role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" role="presentation" onClick={onClose}>
+      <section className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl border border-line bg-surface p-5 shadow-2xl sm:rounded-xl sm:p-6" role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}>
+        <div className="mx-auto -mt-2 mb-3 h-1 w-10 rounded-full bg-slate-300 sm:hidden" />
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold tracking-tight text-ink-900">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-sm text-ink-500">{subtitle}</p>}
+            {subtitle && <p className="mt-0.5 text-xs text-ink-500 sm:text-sm">{subtitle}</p>}
           </div>
-          <button type="button" onClick={onClose} aria-label="Tutup" className="rounded-md px-2 py-1 text-lg leading-none text-ink-500 hover:bg-slate-100">×</button>
+          <button type="button" onClick={onClose} aria-label="Tutup" className="grid h-8 w-8 place-items-center rounded-lg text-lg text-ink-500 hover:bg-slate-100">×</button>
         </div>
         {children}
       </section>
