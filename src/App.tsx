@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase, loadFinanceData, upsertFinanceData } from "./lib/supabase";
+import { supabase, loadFinanceData, upsertFinanceData, clearRemoteFinanceData } from "./lib/supabase";
 import { calculateBalances, dashboardSummary, isValidAllocation, newTransfer, splitIncome } from "./lib/finance";
-import { loadLocalData, saveLocalData } from "./lib/storage";
+import { initialFinanceData, loadLocalData, saveLocalData } from "./lib/storage";
 import type { Asset, Debt, FinanceData, IncomeType, LedgerFilter, ModalKind, View, Wallet } from "./lib/types";
 import type { UserLike } from "./components/layout/types";
 import type { User } from "@supabase/supabase-js";
@@ -105,6 +105,21 @@ export default function App() {
     await supabase.auth.signOut();
     setUser(null);
     setMessage("Beralih ke mode lokal.");
+  }
+
+  async function resetAllData() {
+    setData(initialFinanceData);
+    saveLocalData(initialFinanceData);
+    if (user) {
+      try {
+        await clearRemoteFinanceData();
+        await upsertFinanceData(initialFinanceData);
+      } catch (error) {
+        console.error("Gagal membersihkan data cloud:", error);
+      }
+    }
+    setMessage("Seluruh data berhasil direset ke pengaturan awal.");
+    setView("dashboard");
   }
 
   function addIncome(form: FormData) {
@@ -675,6 +690,7 @@ export default function App() {
           deleteIncomeType={(id) => void deleteIncomeType(id)}
           signInGoogle={signInWithGoogle}
           signOut={() => void handleSignOut()}
+          onResetAllData={() => void resetAllData()}
         />
       )}
       {modal === "income" && <IncomeModal data={data} onClose={() => setModal(null)} onSubmit={addIncome} />}

@@ -236,7 +236,7 @@ export default function AppLayout({
         </aside>
 
         {/* Content Area */}
-        <div className="min-w-0 flex-1 pb-24 lg:pb-8">
+        <div className="min-w-0 flex-1">
           {/* Desktop Header */}
           <header className="sticky top-0 z-30 hidden border-b border-line bg-surface/95 px-6 py-4 backdrop-blur lg:block">
             <div className="flex items-center justify-between gap-3">
@@ -277,77 +277,77 @@ export default function AppLayout({
             </div>
           </header>
 
-          <main className="px-3.5 py-4 sm:px-6 sm:py-6">{children}</main>
-
-          <Toast message={message} onClose={clearMessage} />
-
-          {/* Mobile Speed Dial / FAB: bottom-right corner for fast 1-thumb entry */}
-          <div className="fixed bottom-16 right-4 z-40 lg:hidden">
-            {mobileFabOpen && (
-              <div className="mb-2 grid gap-2">
-                <button
-                  onClick={() => { setMobileFabOpen(false); setModal("income"); }}
-                  className="flex items-center justify-end gap-2 rounded-full border border-emerald-200 bg-white px-3.5 py-2 text-xs font-bold text-emerald-700 shadow-md active:bg-emerald-50"
-                >
-                  <span>+ Dana Masuk</span>
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-600 text-white"><Plus size={14} /></span>
-                </button>
-                <button
-                  onClick={() => { setMobileFabOpen(false); setModal("expense"); }}
-                  className="flex items-center justify-end gap-2 rounded-full border border-rose-200 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 shadow-md active:bg-rose-50"
-                >
-                  <span>− Dana Keluar</span>
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-rose-600 text-white"><ArrowUpRight size={14} /></span>
-                </button>
-                <button
-                  onClick={() => { setMobileFabOpen(false); setModal("transfer"); }}
-                  className="flex items-center justify-end gap-2 rounded-full border border-indigo-200 bg-white px-3.5 py-2 text-xs font-bold text-indigo-700 shadow-md active:bg-indigo-50"
-                >
-                  <span>⇄ Pindah Saldo</span>
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-indigo-600 text-white"><ArrowLeftRight size={14} /></span>
-                </button>
-              </div>
-            )}
-            <button
-              onClick={() => setMobileFabOpen(!mobileFabOpen)}
-              aria-label="Catat transaksi cepat"
-              className={`ml-auto grid h-13 w-13 place-items-center rounded-full text-white shadow-xl transition-transform active:scale-95 ${
-                mobileFabOpen ? "rotate-45 bg-ink-700" : "bg-ink-900"
-              }`}
-            >
-              <Plus size={24} />
-            </button>
-          </div>
-
-          {/* Mobile Bottom Navigation: 5 items, thumb-friendly touch targets */}
-          <nav className="fixed bottom-0 left-0 right-0 z-30 flex h-14 items-center justify-around border-t border-line bg-surface/98 px-2 backdrop-blur lg:hidden">
-            {mobileBottomNav.map(({ key, label, icon: Icon }) => {
-              const active = view === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setView(key)}
-                  className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
-                    active ? "text-ink-900" : "text-ink-500 active:text-ink-700"
-                  }`}
-                >
-                  <Icon size={19} className={active ? "stroke-[2.4]" : "stroke-[1.8]"} />
-                  <span className="mt-0.5 leading-none">{label}</span>
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setDrawer(true)}
-              className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
-                view === "assets" || view === "calendar" || view === "settings" ? "text-ink-900" : "text-ink-500"
-              }`}
-            >
-              <Menu size={19} className={view === "assets" || view === "calendar" || view === "settings" ? "stroke-[2.4]" : "stroke-[1.8]"} />
-              <span className="mt-0.5 leading-none">Menu</span>
-            </button>
-          </nav>
+          <main className="px-3.5 py-4 pb-24 sm:px-6 sm:py-6 lg:pb-8">{children}</main>
         </div>
       </div>
+
+      <Toast message={message} onClose={clearMessage} />
+
+      {/* Mobile Speed Dial / FAB: fixed at viewport level */}
+      <div className="fixed bottom-[4.25rem] right-4 z-40 lg:hidden">
+        {mobileFabOpen && (
+          <div className="mb-2 grid gap-2">
+            <button
+              onClick={() => { setMobileFabOpen(false); setModal("income"); }}
+              className="flex items-center justify-end gap-2 rounded-full border border-emerald-200 bg-white px-3.5 py-2 text-xs font-bold text-emerald-700 shadow-md active:bg-emerald-50"
+            >
+              <span>+ Dana Masuk</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-600 text-white"><Plus size={14} /></span>
+            </button>
+            <button
+              onClick={() => { setMobileFabOpen(false); setModal("expense"); }}
+              className="flex items-center justify-end gap-2 rounded-full border border-rose-200 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 shadow-md active:bg-rose-50"
+            >
+              <span>− Dana Keluar</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-rose-600 text-white"><ArrowUpRight size={14} /></span>
+            </button>
+            <button
+              onClick={() => { setMobileFabOpen(false); setModal("transfer"); }}
+              className="flex items-center justify-end gap-2 rounded-full border border-indigo-200 bg-white px-3.5 py-2 text-xs font-bold text-indigo-700 shadow-md active:bg-indigo-50"
+            >
+              <span>⇄ Pindah Saldo</span>
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-indigo-600 text-white"><ArrowLeftRight size={14} /></span>
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setMobileFabOpen(!mobileFabOpen)}
+          aria-label="Catat transaksi cepat"
+          className={`ml-auto grid h-13 w-13 place-items-center rounded-full text-white shadow-xl transition-transform active:scale-95 ${
+            mobileFabOpen ? "rotate-45 bg-ink-700" : "bg-ink-900"
+          }`}
+        >
+          <Plus size={24} />
+        </button>
+      </div>
+
+      {/* Mobile Bottom Navigation: strictly fixed at viewport bottom */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-line bg-surface/98 px-2 backdrop-blur lg:hidden">
+        {mobileBottomNav.map(({ key, label, icon: Icon }) => {
+          const active = view === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
+                active ? "text-ink-900" : "text-ink-500 active:text-ink-700"
+              }`}
+            >
+              <Icon size={19} className={active ? "stroke-[2.4]" : "stroke-[1.8]"} />
+              <span className="mt-0.5 leading-none">{label}</span>
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setDrawer(true)}
+          className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
+            view === "assets" || view === "calendar" || view === "settings" ? "text-ink-900" : "text-ink-500"
+          }`}
+        >
+          <Menu size={19} className={view === "assets" || view === "calendar" || view === "settings" ? "stroke-[2.4]" : "stroke-[1.8]"} />
+          <span className="mt-0.5 leading-none">Menu</span>
+        </button>
+      </nav>
     </div>
   );
 }

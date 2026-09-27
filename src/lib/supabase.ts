@@ -103,3 +103,19 @@ export async function upsertFinanceData(data: FinanceData) {
     await supabase.from("transfers").upsert({ id: transfer.group_id, user_id: user.id, ...transfer });
   }
 }
+
+export async function clearRemoteFinanceData() {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return;
+  await Promise.all([
+    supabase.from("ledger_entries").delete().eq("user_id", user.id),
+    supabase.from("allocation_logs").delete().eq("user_id", user.id),
+    supabase.from("transfers").delete().eq("user_id", user.id),
+    supabase.from("debt_payments").delete().eq("user_id", user.id),
+    supabase.from("debts").delete().eq("user_id", user.id),
+    supabase.from("assets").delete().eq("user_id", user.id),
+    supabase.from("wallet_targets").delete().eq("user_id", user.id),
+    supabase.from("income_types").delete().eq("user_id", user.id),
+    supabase.from("wallets").delete().eq("user_id", user.id),
+  ]);
+}

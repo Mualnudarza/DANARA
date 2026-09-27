@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Cloud, LogIn, LogOut } from "lucide-react";
+import { AlertTriangle, Cloud, LogIn, LogOut } from "lucide-react";
 import { allocationTotal } from "../../lib/finance";
 import type { FinanceData, IncomeType, Wallet } from "../../lib/types";
 import type { UserLike } from "../layout/types";
 import { Empty } from "../ui/primitives";
+import DangerResetModal from "../forms/DangerResetModal";
 
 export default function SettingsView({
   data,
@@ -13,6 +14,7 @@ export default function SettingsView({
   deleteIncomeType,
   signInGoogle,
   signOut,
+  onResetAllData,
 }: {
   data: FinanceData;
   user?: UserLike;
@@ -21,8 +23,10 @@ export default function SettingsView({
   deleteIncomeType: (id: string) => void;
   signInGoogle?: () => void;
   signOut?: () => void;
+  onResetAllData?: () => void;
 }) {
   const [newName, setNewName] = useState("");
+  const [showResetModal, setShowResetModal] = useState(false);
   const isLocal = user?.isLocal ?? true;
 
   return (
@@ -101,6 +105,38 @@ export default function SettingsView({
           <AllocationEditor key={incomeType.id} type={incomeType} wallets={data.wallets} onSave={updateIncomeType} onDelete={deleteIncomeType} />
         ))}
       </section>
+
+      {/* Danger Zone Section */}
+      <section className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 shadow-[0_1px_2px_0_rgb(0_0_0/0.05)]">
+        <div className="flex items-center gap-2 text-rose-800">
+          <AlertTriangle size={17} />
+          <h2 className="text-sm font-bold">Zona Bahaya (Danger Zone)</h2>
+        </div>
+        <p className="mt-1 text-xs text-rose-700">
+          Reset seluruh data sistem (dompet, saldo, mutasi transaksi, hutang, piutang, dan portofolio aset) kembali ke pengaturan awal.
+        </p>
+
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setShowResetModal(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 shadow-xs hover:bg-rose-50 active:bg-rose-100"
+          >
+            <AlertTriangle size={14} className="text-rose-600" />
+            Reset Semua Data
+          </button>
+        </div>
+      </section>
+
+      {showResetModal && onResetAllData && (
+        <DangerResetModal
+          onClose={() => setShowResetModal(false)}
+          onConfirm={() => {
+            setShowResetModal(false);
+            onResetAllData();
+          }}
+        />
+      )}
     </div>
   );
 }
