@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeftRight, ArrowUpRight, BarChart3, CalendarDays, Cloud, Gem, Handshake, History, LogIn, LogOut, Menu, Plus, RefreshCw, Settings2, WalletCards, X } from "lucide-react";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, CalendarDays, Cloud, Gem, Handshake, History, LogIn, LogOut, Menu, Plus, RefreshCw, Settings2, WalletCards, X } from "lucide-react";
 import { rupiah } from "../../lib/finance";
 import type { ModalKind, UserLike, View } from "./types";
 import Toast from "../ui/Toast";
@@ -29,6 +29,7 @@ const viewTitles: Record<View, string> = {
   history: "Riwayat transaksi",
   calendar: "Kalender transaksi",
   settings: "Pengaturan alokasi",
+  menu: "Menu & Modul",
 };
 
 export default function AppLayout({
@@ -59,7 +60,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const [drawer, setDrawer] = useState(false);
-  const [mobileFabOpen, setMobileFabOpen] = useState(false);
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const displayName = user.user_metadata?.full_name || user.email || "Pengguna Lokal";
   const avatar = user.user_metadata?.avatar_url as string | undefined;
   const isLocal = user.isLocal ?? false;
@@ -283,69 +284,143 @@ export default function AppLayout({
 
       <Toast message={message} onClose={clearMessage} />
 
-      {/* Mobile Speed Dial / FAB: fixed at viewport level */}
-      <div className="fixed bottom-[4.25rem] right-4 z-40 lg:hidden">
-        {mobileFabOpen && (
-          <div className="mb-2 grid gap-2">
+      {/* Mobile Action Sheet Modal */}
+      {actionSheetOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/40 p-0 backdrop-blur-[2px] lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pilih jenis transaksi"
+          onClick={() => setActionSheetOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-2xl border border-line bg-surface p-4 shadow-2xl transition-all sm:p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-300" />
+            <div className="flex items-center justify-between border-b border-line pb-2.5">
+              <div>
+                <h2 className="text-base font-bold text-ink-900">Catat Transaksi</h2>
+                <p className="text-xs text-ink-500">Pilih jenis mutasi kas yang ingin ditambahkan</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActionSheetOpen(false)}
+                className="grid h-7 w-7 place-items-center rounded-lg text-ink-500 hover:bg-slate-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-3.5 grid gap-2.5">
+              <button
+                onClick={() => { setActionSheetOpen(false); setModal("income"); }}
+                className="flex items-center gap-3.5 rounded-xl border border-flow-in-line bg-flow-in-bg p-3.5 text-left transition-transform active:scale-[0.99]"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-600 text-white">
+                  <ArrowDownLeft size={20} />
+                </span>
+                <div>
+                  <span className="block text-sm font-bold text-flow-in-text">Dana Masuk</span>
+                  <span className="block text-xs text-flow-in-text/80">Bagi otomatis ke pos dompet menurut formula persentase</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => { setActionSheetOpen(false); setModal("expense"); }}
+                className="flex items-center gap-3.5 rounded-xl border border-flow-out-line bg-flow-out-bg p-3.5 text-left transition-transform active:scale-[0.99]"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-600 text-white">
+                  <ArrowUpRight size={20} />
+                </span>
+                <div>
+                  <span className="block text-sm font-bold text-flow-out-text">Dana Keluar (Pengeluaran)</span>
+                  <span className="block text-xs text-flow-out-text/80">Kurangi saldo dari satu dompet pilihan</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => { setActionSheetOpen(false); setModal("transfer"); }}
+                className="flex items-center gap-3.5 rounded-xl border border-flow-move-line bg-flow-move-bg p-3.5 text-left transition-transform active:scale-[0.99]"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-600 text-white">
+                  <ArrowLeftRight size={20} />
+                </span>
+                <div>
+                  <span className="block text-sm font-bold text-flow-move-text">Pindah Saldo</span>
+                  <span className="block text-xs text-flow-move-text/80">Transfer antar-dompet, total saldo kas tetap aman</span>
+                </div>
+              </button>
+            </div>
+
             <button
-              onClick={() => { setMobileFabOpen(false); setModal("income"); }}
-              className="flex items-center justify-end gap-2 rounded-full border border-emerald-200 bg-white px-3.5 py-2 text-xs font-bold text-emerald-700 shadow-md active:bg-emerald-50"
+              type="button"
+              onClick={() => setActionSheetOpen(false)}
+              className="mt-3 flex w-full items-center justify-center rounded-xl border border-line py-2.5 text-xs font-semibold text-ink-700 active:bg-slate-100"
             >
-              <span>+ Dana Masuk</span>
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-600 text-white"><Plus size={14} /></span>
-            </button>
-            <button
-              onClick={() => { setMobileFabOpen(false); setModal("expense"); }}
-              className="flex items-center justify-end gap-2 rounded-full border border-rose-200 bg-white px-3.5 py-2 text-xs font-bold text-rose-700 shadow-md active:bg-rose-50"
-            >
-              <span>− Dana Keluar</span>
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-rose-600 text-white"><ArrowUpRight size={14} /></span>
-            </button>
-            <button
-              onClick={() => { setMobileFabOpen(false); setModal("transfer"); }}
-              className="flex items-center justify-end gap-2 rounded-full border border-indigo-200 bg-white px-3.5 py-2 text-xs font-bold text-indigo-700 shadow-md active:bg-indigo-50"
-            >
-              <span>⇄ Pindah Saldo</span>
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-indigo-600 text-white"><ArrowLeftRight size={14} /></span>
+              Batal
             </button>
           </div>
-        )}
-        <button
-          onClick={() => setMobileFabOpen(!mobileFabOpen)}
-          aria-label="Catat transaksi cepat"
-          className={`ml-auto grid h-13 w-13 place-items-center rounded-full text-white shadow-xl transition-transform active:scale-95 ${
-            mobileFabOpen ? "rotate-45 bg-ink-700" : "bg-ink-900"
-          }`}
-        >
-          <Plus size={24} />
-        </button>
-      </div>
+        </div>
+      )}
 
-      {/* Mobile Bottom Navigation: strictly fixed at viewport bottom */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-line bg-surface/98 px-2 backdrop-blur lg:hidden">
-        {mobileBottomNav.map(({ key, label, icon: Icon }) => {
-          const active = view === key;
-          return (
-            <button
-              key={key}
-              onClick={() => setView(key)}
-              className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
-                active ? "text-ink-900" : "text-ink-500 active:text-ink-700"
-              }`}
-            >
-              <Icon size={19} className={active ? "stroke-[2.4]" : "stroke-[1.8]"} />
-              <span className="mt-0.5 leading-none">{label}</span>
-            </button>
-          );
-        })}
+      {/* Mobile Center Dock Bottom Navigation: 5-Tab Bar */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t border-line bg-surface/98 px-1 pb-safe backdrop-blur lg:hidden">
+        {/* 1. Beranda */}
         <button
-          onClick={() => setDrawer(true)}
+          onClick={() => setView("dashboard")}
           className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
-            view === "assets" || view === "calendar" || view === "settings" ? "text-ink-900" : "text-ink-500"
+            view === "dashboard" ? "text-ink-900" : "text-ink-500 active:text-ink-700"
           }`}
         >
-          <Menu size={19} className={view === "assets" || view === "calendar" || view === "settings" ? "stroke-[2.4]" : "stroke-[1.8]"} />
-          <span className="mt-0.5 leading-none">Menu</span>
+          <BarChart3 size={20} className={view === "dashboard" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+          <span className="mt-1 leading-none">Beranda</span>
+        </button>
+
+        {/* 2. Dompet */}
+        <button
+          onClick={() => setView("wallets")}
+          className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
+            view === "wallets" ? "text-ink-900" : "text-ink-500 active:text-ink-700"
+          }`}
+        >
+          <WalletCards size={20} className={view === "wallets" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+          <span className="mt-1 leading-none">Dompet</span>
+        </button>
+
+        {/* 3. Center Elevated Action Button */}
+        <div className="relative -top-2 flex flex-1 items-center justify-center">
+          <button
+            onClick={() => setActionSheetOpen(true)}
+            aria-label="Catat transaksi baru"
+            className="grid h-12 w-12 place-items-center rounded-full bg-ink-900 text-white shadow-lg transition-transform active:scale-95 hover:bg-ink-800"
+          >
+            <Plus size={24} className="stroke-[2.5]" />
+          </button>
+        </div>
+
+        {/* 4. Riwayat */}
+        <button
+          onClick={() => setView("history")}
+          className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
+            view === "history" ? "text-ink-900" : "text-ink-500 active:text-ink-700"
+          }`}
+        >
+          <History size={20} className={view === "history" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+          <span className="mt-1 leading-none">Riwayat</span>
+        </button>
+
+        {/* 5. Menu */}
+        <button
+          onClick={() => setView("menu")}
+          className={`flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-semibold transition-colors ${
+            view === "menu" || view === "assets" || view === "debts" || view === "calendar" || view === "settings"
+              ? "text-ink-900"
+              : "text-ink-500 active:text-ink-700"
+          }`}
+        >
+          <Menu size={20} className={view === "menu" || view === "assets" || view === "debts" || view === "calendar" || view === "settings" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+          <span className="mt-1 leading-none">Menu</span>
         </button>
       </nav>
     </div>

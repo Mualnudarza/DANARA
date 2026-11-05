@@ -13,6 +13,7 @@ import HistoryView from "./components/views/HistoryView";
 import CalendarView from "./components/views/CalendarView";
 import DebtsView from "./components/views/DebtsView";
 import SettingsView from "./components/views/SettingsView";
+import MenuView from "./components/views/MenuView";
 import { ExpenseModal, IncomeModal, TransferModal } from "./components/forms/TransactionModals";
 
 const guestUser: UserLike = {
@@ -691,6 +692,15 @@ export default function App() {
           signInGoogle={signInWithGoogle}
           signOut={() => void handleSignOut()}
           onResetAllData={() => void resetAllData()}
+        />
+      )}
+      {view === "menu" && (
+        <MenuView
+          setView={setView}
+          user={activeUser}
+          totalBalance={summary.totalBalance}
+          assetsCount={data.assets.filter((a) => a.status === "active").length}
+          activeDebtsCount={data.debts.filter((d) => d.status === "active").length}
         />
       )}
       {modal === "income" && <IncomeModal data={data} onClose={() => setModal(null)} onSubmit={addIncome} />}

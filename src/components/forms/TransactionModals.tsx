@@ -4,23 +4,41 @@ import type { FinanceData } from "../../lib/types";
 import { Field, ModalShell } from "../ui/primitives";
 
 const today = new Date().toISOString().slice(0, 10);
-const inputCls = "h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm";
+const inputCls = "h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm";
 
 function inputNumber(value: string) {
   return Number(value.replace(/\D/g, "")) || 0;
 }
 
-function WalletSelect({ data, balances, name, label = "Dompet" }: { data: FinanceData; balances: Record<string, number>; name: string; label?: string }) {
+const PRESET_AMOUNTS = [
+  { label: "+10rb", value: 10_000 },
+  { label: "+20rb", value: 20_000 },
+  { label: "+50rb", value: 50_000 },
+  { label: "+100rb", value: 100_000 },
+  { label: "+500rb", value: 500_000 },
+];
+
+function QuickAmountChips({ onAdd, onClear }: { onAdd: (val: number) => void; onClear: () => void }) {
   return (
-    <Field label={label}>
-      <select name={name} required className={inputCls}>
-        {data.wallets.map((wallet) => (
-          <option value={wallet.id} key={wallet.id}>
-            {wallet.name} · {rupiah.format(balances[wallet.id] ?? 0)}
-          </option>
-        ))}
-      </select>
-    </Field>
+    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+      {PRESET_AMOUNTS.map((preset) => (
+        <button
+          key={preset.label}
+          type="button"
+          onClick={() => onAdd(preset.value)}
+          className="rounded-md border border-line bg-slate-50 px-2.5 py-1 text-xs font-semibold text-ink-700 transition-colors hover:bg-slate-100 active:scale-95"
+        >
+          {preset.label}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={onClear}
+        className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100 active:scale-95"
+      >
+        Reset
+      </button>
+    </div>
   );
 }
 
@@ -29,9 +47,10 @@ export function IncomeModal({ data, onClose, onSubmit }: { data: FinanceData; on
   const [amount, setAmount] = useState(0);
   const type = data.incomeTypes.find((item) => item.id === typeId);
   const max = Math.max(...(type ? Object.values(type.allocations) : [0]), 1);
+
   return (
     <ModalShell title="Catat dana masuk" subtitle="Nominal dibagi otomatis ke dompet sesuai alokasi." onClose={onClose}>
-      <form action={(form) => onSubmit(form)} className="grid gap-3">
+      <form action={(form) => onSubmit(form)} className="grid gap-3.5">
         <Field label="Tipe pemasukan">
           <select name="incomeType" value={typeId} onChange={(event) => setTypeId(event.target.value)} required className={inputCls}>
             {data.incomeTypes.map((item) => (
@@ -39,15 +58,37 @@ export function IncomeModal({ data, onClose, onSubmit }: { data: FinanceData; on
             ))}
           </select>
         </Field>
+
         <Field label="Nominal">
-          <input name="amount" inputMode="numeric" placeholder="10000000" onChange={(event) => setAmount(inputNumber(event.target.value))} required className={`${inputCls} tabular text-center text-lg font-bold`} />
+          <input
+            name="amount"
+            inputMode="numeric"
+            placeholder="0"
+            value={amount > 0 ? amount : ""}
+            onChange={(event) => setAmount(inputNumber(event.target.value))}
+            required
+            className={`${inputCls} tabular text-center text-xl font-bold tracking-tight`}
+          />
+          <div className="flex items-center justify-between text-xs text-ink-500">
+            <span>Terbilang:</span>
+            <strong className="tabular font-semibold text-ink-900">
+              {amount > 0 ? rupiah.format(amount) : "Rp 0"}
+            </strong>
+          </div>
+          <QuickAmountChips
+            onAdd={(val) => setAmount((prev) => prev + val)}
+            onClear={() => setAmount(0)}
+          />
         </Field>
+
         <Field label="Tanggal">
           <input name="date" type="date" defaultValue={today} required className={inputCls} />
         </Field>
+
         <Field label="Catatan">
           <input name="note" placeholder="Contoh: Gaji September" className={inputCls} />
         </Field>
+
         {type && amount > 0 && (
           <div className="grid gap-2 rounded-lg bg-slate-50 p-3">
             <p className="text-xs font-bold uppercase tracking-wider text-ink-500">Preview alokasi</p>
@@ -68,9 +109,15 @@ export function IncomeModal({ data, onClose, onSubmit }: { data: FinanceData; on
             })}
           </div>
         )}
-        <div className="flex justify-end gap-2 border-t border-line pt-3">
-          <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink-700">Batal</button>
-          <button disabled={!type || !isValidAllocation(type)} className="rounded-lg bg-ink-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Simpan</button>
+
+        {/* Sticky Action Footer */}
+        <div className="sticky bottom-0 -mx-5 -mb-5 mt-2 flex items-center justify-end gap-2 border-t border-line bg-surface/98 p-4 pb-safe backdrop-blur sm:-mx-6 sm:-mb-6 sm:static sm:bg-transparent sm:p-0 sm:pt-3">
+          <button type="button" onClick={onClose} className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-slate-50">
+            Batal
+          </button>
+          <button disabled={!type || !isValidAllocation(type) || amount <= 0} className="rounded-lg bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-50 active:scale-95">
+            Simpan
+          </button>
         </div>
       </form>
     </ModalShell>
@@ -82,9 +129,10 @@ export function ExpenseModal({ data, balances, onClose, onSubmit }: { data: Fina
   const [amount, setAmount] = useState(0);
   const available = balances[walletId] ?? 0;
   const over = amount > available;
+
   return (
     <ModalShell title="Catat dana keluar" subtitle="Kurangi saldo satu dompet." onClose={onClose}>
-      <form action={(form) => onSubmit(form)} className="grid gap-3">
+      <form action={(form) => onSubmit(form)} className="grid gap-3.5">
         <Field label="Dompet">
           <select name="walletId" value={walletId} onChange={(event) => setWalletId(event.target.value)} required className={inputCls}>
             {data.wallets.map((wallet) => (
@@ -92,24 +140,51 @@ export function ExpenseModal({ data, balances, onClose, onSubmit }: { data: Fina
             ))}
           </select>
         </Field>
+
         <Field label="Nominal">
-          <input name="amount" inputMode="numeric" placeholder="800000" onChange={(event) => setAmount(inputNumber(event.target.value))} required className={`${inputCls} tabular text-center text-lg font-bold`} />
+          <input
+            name="amount"
+            inputMode="numeric"
+            placeholder="0"
+            value={amount > 0 ? amount : ""}
+            onChange={(event) => setAmount(inputNumber(event.target.value))}
+            required
+            className={`${inputCls} tabular text-center text-xl font-bold tracking-tight`}
+          />
+          <div className="flex items-center justify-between text-xs text-ink-500">
+            <span>Tersedia: <strong className="tabular text-ink-900">{rupiah.format(available)}</strong></span>
+            <strong className="tabular font-semibold text-ink-900">
+              {amount > 0 ? rupiah.format(amount) : "Rp 0"}
+            </strong>
+          </div>
+          <QuickAmountChips
+            onAdd={(val) => setAmount((prev) => prev + val)}
+            onClear={() => setAmount(0)}
+          />
         </Field>
-        <p className="text-xs text-ink-500">Tersedia: <strong className="tabular text-ink-900">{rupiah.format(available)}</strong></p>
+
         {over && amount > 0 && (
           <p role="alert" className="rounded-lg border border-flow-out-line bg-flow-out-bg px-3 py-2 text-xs font-semibold text-flow-out-text">
             Nominal melebihi saldo dompet. Kurangi nominal atau pindahkan saldo dulu.
           </p>
         )}
+
         <Field label="Tanggal">
           <input name="date" type="date" defaultValue={today} required className={inputCls} />
         </Field>
+
         <Field label="Catatan">
           <input name="note" placeholder="Contoh: Belanja grocery" className={inputCls} />
         </Field>
-        <div className="flex justify-end gap-2 border-t border-line pt-3">
-          <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink-700">Batal</button>
-          <button disabled={over || amount <= 0} className="rounded-lg bg-ink-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Simpan</button>
+
+        {/* Sticky Action Footer */}
+        <div className="sticky bottom-0 -mx-5 -mb-5 mt-2 flex items-center justify-end gap-2 border-t border-line bg-surface/98 p-4 pb-safe backdrop-blur sm:-mx-6 sm:-mb-6 sm:static sm:bg-transparent sm:p-0 sm:pt-3">
+          <button type="button" onClick={onClose} className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-slate-50">
+            Batal
+          </button>
+          <button disabled={over || amount <= 0} className="rounded-lg bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-50 active:scale-95">
+            Simpan
+          </button>
         </div>
       </form>
     </ModalShell>
@@ -123,9 +198,10 @@ export function TransferModal({ data, balances, onClose, onSubmit }: { data: Fin
   const available = balances[from] ?? 0;
   const same = from === to;
   const over = amount > available;
+
   return (
     <ModalShell title="Pindah saldo" subtitle="Total saldo tidak berubah, hanya berpindah dompet." onClose={onClose}>
-      <form action={(form) => onSubmit(form)} className="grid gap-3">
+      <form action={(form) => onSubmit(form)} className="grid gap-3.5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
           <Field label="Dari dompet">
             <select name="from" value={from} onChange={(event) => setFrom(event.target.value)} required className={inputCls}>
@@ -134,7 +210,7 @@ export function TransferModal({ data, balances, onClose, onSubmit }: { data: Fin
               ))}
             </select>
           </Field>
-          <span aria-hidden className="pb-2.5 text-lg text-ink-500">→</span>
+          <span aria-hidden className="pb-3 text-lg text-ink-500">→</span>
           <Field label="Ke dompet">
             <select name="to" value={to} onChange={(event) => setTo(event.target.value)} required className={inputCls}>
               {data.wallets.map((wallet) => (
@@ -143,22 +219,53 @@ export function TransferModal({ data, balances, onClose, onSubmit }: { data: Fin
             </select>
           </Field>
         </div>
-        <p className="text-xs text-ink-500">Tersedia di sumber: <strong className="tabular text-ink-900">{rupiah.format(available)}</strong></p>
+
+        <div className="flex items-center justify-between text-xs text-ink-500">
+          <span>Tersedia di sumber: <strong className="tabular text-ink-900">{rupiah.format(available)}</strong></span>
+          <span>Tersedia di tujuan: <strong className="tabular text-ink-900">{rupiah.format(balances[to] ?? 0)}</strong></span>
+        </div>
+
         {same && <p role="alert" className="rounded-lg border border-flow-move-line bg-flow-move-bg px-3 py-2 text-xs font-semibold text-flow-move-text">Pilih dua dompet yang berbeda.</p>}
         {over && amount > 0 && <p role="alert" className="rounded-lg border border-flow-out-line bg-flow-out-bg px-3 py-2 text-xs font-semibold text-flow-out-text">Nominal melebihi saldo dompet sumber.</p>}
-        <p className="text-xs text-ink-500">Tersedia di tujuan: <strong className="tabular text-ink-900">{rupiah.format(balances[to] ?? 0)}</strong></p>
+
         <Field label="Nominal">
-          <input name="amount" inputMode="numeric" placeholder="500000" onChange={(event) => setAmount(inputNumber(event.target.value))} required className={`${inputCls} tabular text-center text-lg font-bold`} />
+          <input
+            name="amount"
+            inputMode="numeric"
+            placeholder="0"
+            value={amount > 0 ? amount : ""}
+            onChange={(event) => setAmount(inputNumber(event.target.value))}
+            required
+            className={`${inputCls} tabular text-center text-xl font-bold tracking-tight`}
+          />
+          <div className="flex items-center justify-between text-xs text-ink-500">
+            <span>Terbilang:</span>
+            <strong className="tabular font-semibold text-ink-900">
+              {amount > 0 ? rupiah.format(amount) : "Rp 0"}
+            </strong>
+          </div>
+          <QuickAmountChips
+            onAdd={(val) => setAmount((prev) => prev + val)}
+            onClear={() => setAmount(0)}
+          />
         </Field>
+
         <Field label="Tanggal">
           <input name="date" type="date" defaultValue={today} required className={inputCls} />
         </Field>
+
         <Field label="Catatan">
           <input name="note" placeholder="Contoh: Top up belanja" className={inputCls} />
         </Field>
-        <div className="flex justify-end gap-2 border-t border-line pt-3">
-          <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink-700">Batal</button>
-          <button disabled={same || over || amount <= 0} className="rounded-lg bg-ink-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Pindahkan</button>
+
+        {/* Sticky Action Footer */}
+        <div className="sticky bottom-0 -mx-5 -mb-5 mt-2 flex items-center justify-end gap-2 border-t border-line bg-surface/98 p-4 pb-safe backdrop-blur sm:-mx-6 sm:-mb-6 sm:static sm:bg-transparent sm:p-0 sm:pt-3">
+          <button type="button" onClick={onClose} className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink-700 hover:bg-slate-50">
+            Batal
+          </button>
+          <button disabled={same || over || amount <= 0} className="rounded-lg bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-50 active:scale-95">
+            Pindahkan
+          </button>
         </div>
       </form>
     </ModalShell>

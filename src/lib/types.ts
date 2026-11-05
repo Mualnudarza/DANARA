@@ -95,7 +95,7 @@ export interface DayAggregate {
   hasTransfer: boolean;
 }
 
-export type View = "dashboard" | "wallets" | "history" | "calendar" | "debts" | "assets" | "settings";
+export type View = "dashboard" | "wallets" | "history" | "calendar" | "debts" | "assets" | "settings" | "menu";
 export type ModalKind = "income" | "expense" | "transfer" | "debt" | "debt-payment" | null;
 export type LedgerFilter = "all" | "income" | "expense" | "transfer";
 
