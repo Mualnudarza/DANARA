@@ -33,7 +33,7 @@ Versi: 1.1.0
 ## 04 Import Ordering
 Blok impor pada setiap berkas diatur rapi dan dikelompokkan dengan urutan berikut:
 1. Pustaka eksternal inti (`react`, `@supabase/supabase-js`, `lucide-react`).
-2. Modul logika bisnis dan utilitas lokal (`../../lib/finance`, `../../lib/storage`).
+2. Modul logika bisnis dan nilai awal (`../../lib/finance`, `../../lib/storage`).
 3. Komponen antarmuka lokal (`../ui/primitives`, `../dashboard/MetricCard`).
 4. Impor tipe TypeScript murni (`import type { FinanceData, Wallet } from "../../lib/types"`).
 

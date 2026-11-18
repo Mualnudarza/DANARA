@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase, loadFinanceData, upsertFinanceData, clearRemoteFinanceData } from "./lib/supabase";
 import { calculateBalances, dashboardSummary, isValidAllocation, newTransfer, splitIncome } from "./lib/finance";
-import { initialFinanceData, loadLocalData, saveLocalData } from "./lib/storage";
+import { initialFinanceData } from "./lib/storage";
 import type { Asset, Debt, FinanceData, IncomeType, LedgerFilter, ModalKind, View, Wallet } from "./lib/types";
 import type { UserLike } from "./components/layout/types";
 import type { User } from "@supabase/supabase-js";
@@ -16,67 +16,87 @@ import SettingsView from "./components/views/SettingsView";
 import MenuView from "./components/views/MenuView";
 import { ExpenseModal, IncomeModal, TransferModal } from "./components/forms/TransactionModals";
 
-const guestUser: UserLike = {
-  email: "Mode Lokal (Offline)",
-  isLocal: true,
-  user_metadata: { full_name: "Pengguna Lokal" },
-};
-
 function inputNumber(value: string) {
   return Number(value.replace(/\D/g, "")) || 0;
 }
 
 export default function App() {
-  const [data, setData] = useState<FinanceData>(loadLocalData);
+  const [data, setData] = useState<FinanceData>(initialFinanceData);
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
   const [view, setView] = useState<View>("dashboard");
   const [modal, setModal] = useState<ModalKind>(null);
   const [filter, setFilter] = useState<LedgerFilter>("all");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const activeUser: UserLike = user
-    ? { email: user.email, isLocal: false, user_metadata: user.user_metadata }
-    : guestUser;
+  const activeUser: UserLike = { email: user?.email, user_metadata: user?.user_metadata };
 
   const summary = useMemo(() => dashboardSummary(data.wallets, data.entries), [data]);
   const balances = useMemo(() => calculateBalances(data.wallets, data.entries), [data]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUser(data.user);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => listener.subscription.unsubscribe();
+    const handleOnline = () => setOnline(navigator.onLine);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOnline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOnline);
+    };
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    let active = true;
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      setUser(session?.user ?? null);
+      setDataReady(false);
+      if (!session?.user) setData(initialFinanceData);
+    });
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!active) return;
+      if (error) setMessage(error.message);
+      setUser(data.user);
+      setAuthReady(true);
+    }).catch((error: unknown) => {
+      if (active) {
+        setMessage(error instanceof Error ? error.message : "Gagal memeriksa sesi.");
+        setAuthReady(true);
+      }
+    });
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user || !online) {
+      setDataReady(false);
+      return;
+    }
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, online]);
 
   async function refresh() {
-    if (!user) {
-      setData(loadLocalData());
-      setMessage("Data lokal termuat.");
+    if (!user || !online) {
+      setDataReady(false);
+      setMessage(user ? "Koneksi internet diperlukan." : "Masuk dengan Google untuk melanjutkan.");
       return;
     }
     try {
       setBusy(true);
+      setDataReady(false);
       setMessage("");
       const remoteData = await loadFinanceData();
-      if (remoteData.wallets.length === 0 && data.wallets.length > 0) {
-        await upsertFinanceData(data);
-        setMessage("Data lokal disinkronkan ke akun Google.");
-      } else {
-        setData(remoteData);
-        saveLocalData(remoteData);
-        setMessage("Data terbaru dimuat dari Supabase.");
-      }
+      setData(remoteData);
+      setDataReady(true);
+      setMessage("Data terbaru dimuat dari Supabase.");
     } catch (error) {
+      setDataReady(false);
       setMessage(error instanceof Error ? error.message : "Gagal memuat data cloud.");
     } finally {
       setBusy(false);
@@ -84,14 +104,19 @@ export default function App() {
   }
 
   async function save(next: FinanceData) {
-    setData(next);
-    saveLocalData(next);
     setModal(null);
-    if (!user) return;
+    if (!user || !online) {
+      setDataReady(false);
+      setMessage("Koneksi internet diperlukan. Data tidak disimpan.");
+      return;
+    }
     try {
       await upsertFinanceData(next);
+      setData(next);
+      setMessage("Perubahan tersimpan ke Supabase.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Gagal menyelaraskan ke cloud.");
+      setDataReady(false);
+      setMessage(error instanceof Error ? error.message : "Gagal menyimpan data cloud.");
     }
   }
 
@@ -105,22 +130,21 @@ export default function App() {
   async function handleSignOut() {
     await supabase.auth.signOut();
     setUser(null);
-    setMessage("Beralih ke mode lokal.");
+    setData(initialFinanceData);
+    setDataReady(false);
+    setMessage("Masuk dengan Google untuk melanjutkan.");
   }
 
   async function resetAllData() {
-    setData(initialFinanceData);
-    saveLocalData(initialFinanceData);
-    if (user) {
-      try {
-        await clearRemoteFinanceData();
-        await upsertFinanceData(initialFinanceData);
-      } catch (error) {
-        console.error("Gagal membersihkan data cloud:", error);
-      }
+    try {
+      await clearRemoteFinanceData();
+      await upsertFinanceData(initialFinanceData);
+      setData(initialFinanceData);
+      setMessage("Seluruh data berhasil direset ke pengaturan awal.");
+      setView("dashboard");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Gagal mereset data cloud.");
     }
-    setMessage("Seluruh data berhasil direset ke pengaturan awal.");
-    setView("dashboard");
   }
 
   function addIncome(form: FormData) {
@@ -208,23 +232,12 @@ export default function App() {
       return;
     }
     if (!window.confirm("Hapus dompet ini?")) return;
-    const next = {
-      ...data,
-      wallets: data.wallets.filter((item) => item.id !== id),
-      walletTargets: data.walletTargets.filter((item) => item.walletId !== id),
-    };
-    setData(next);
-    saveLocalData(next);
-    if (!user) {
+    try {
+      await supabase.from("wallets").delete().eq("id", id).throwOnError();
       setMessage("Dompet dihapus.");
-      return;
-    }
-    const { error } = await supabase.from("wallets").delete().eq("id", id);
-    if (error) {
-      setMessage(error.message);
-      void refresh();
-    } else {
-      setMessage("Dompet dihapus.");
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Gagal menghapus dompet cloud.");
     }
   }
 
@@ -232,12 +245,13 @@ export default function App() {
     if (targetAmount <= 0) {
       const nextTargets = data.walletTargets.filter((t) => t.walletId !== walletId);
       const next = { ...data, walletTargets: nextTargets };
-      setData(next);
-      saveLocalData(next);
-      if (user) {
-        await supabase.from("wallet_targets").delete().eq("wallet_id", walletId);
+      try {
+        await supabase.from("wallet_targets").delete().eq("wallet_id", walletId).throwOnError();
+        setData(next);
+        setMessage("Target dompet dihapus.");
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Gagal menghapus target cloud.");
       }
-      setMessage("Target dompet dihapus.");
       return;
     }
 
@@ -284,19 +298,12 @@ export default function App() {
       return;
     }
     if (!window.confirm("Hapus tipe alokasi ini?")) return;
-    const next = { ...data, incomeTypes: data.incomeTypes.filter((item) => item.id !== id) };
-    setData(next);
-    saveLocalData(next);
-    if (!user) {
+    try {
+      await supabase.from("income_types").delete().eq("id", id).throwOnError();
       setMessage("Tipe dihapus.");
-      return;
-    }
-    const { error } = await supabase.from("income_types").delete().eq("id", id);
-    if (error) {
-      setMessage(error.message);
-      void refresh();
-    } else {
-      setMessage("Tipe dihapus.");
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Gagal menghapus tipe cloud.");
     }
   }
 
@@ -482,19 +489,12 @@ export default function App() {
       return;
     }
     if (!window.confirm("Hapus catatan hutang ini?")) return;
-    const next = { ...data, debts: data.debts.filter((item) => item.id !== id) };
-    setData(next);
-    saveLocalData(next);
-    if (!user) {
+    try {
+      await supabase.from("debts").delete().eq("id", id).throwOnError();
       setMessage("Hutang dihapus.");
-      return;
-    }
-    const { error } = await supabase.from("debts").delete().eq("id", id);
-    if (error) {
-      setMessage(error.message);
-      void refresh();
-    } else {
-      setMessage("Hutang dihapus.");
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Gagal menghapus hutang cloud.");
     }
   }
 
@@ -616,20 +616,33 @@ export default function App() {
 
   async function deleteAsset(id: string) {
     if (!window.confirm("Hapus catatan aset ini?")) return;
-    const next = { ...data, assets: data.assets.filter((a) => a.id !== id) };
-    setData(next);
-    saveLocalData(next);
-    if (!user) {
+    try {
+      await supabase.from("assets").delete().eq("id", id).throwOnError();
       setMessage("Aset dihapus.");
-      return;
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Gagal menghapus aset cloud.");
     }
-    const { error } = await supabase.from("assets").delete().eq("id", id);
-    if (error) {
-      setMessage(error.message);
-      void refresh();
-    } else {
-      setMessage("Aset dihapus.");
-    }
+  }
+
+  if (!authReady || (user && busy)) {
+    return <main className="grid min-h-screen place-items-center bg-canvas p-6 text-sm text-ink-600">Memeriksa sesi dan memuat data cloud…</main>;
+  }
+
+  if (!user || !dataReady) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-canvas p-6">
+        <section className="w-full max-w-sm rounded-xl border border-line bg-surface p-6 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-ink-900">Danara</h1>
+          <p className="mt-2 text-sm text-ink-600">{!online ? "Koneksi internet diperlukan untuk mengakses data." : message || "Masuk dengan Google untuk melanjutkan."}</p>
+          {user ? (
+            <button onClick={() => void refresh()} className="mt-4 w-full rounded-lg bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white">Coba lagi</button>
+          ) : (
+            <button onClick={signInWithGoogle} className="mt-4 w-full rounded-lg bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white">Masuk dengan Google</button>
+          )}
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -644,7 +657,6 @@ export default function App() {
       clearMessage={() => setMessage("")}
       refresh={() => void refresh()}
       signOut={() => void handleSignOut()}
-      signInGoogle={signInWithGoogle}
     >
       {view === "dashboard" && (
         <DashboardView data={data} summary={summary} balances={balances} filter={filter} setFilter={setFilter} setModal={setModal} />
@@ -689,8 +701,7 @@ export default function App() {
           addIncomeType={addIncomeType}
           updateIncomeType={updateIncomeType}
           deleteIncomeType={(id) => void deleteIncomeType(id)}
-          signInGoogle={signInWithGoogle}
-          signOut={() => void handleSignOut()}
+              signOut={() => void handleSignOut()}
           onResetAllData={() => void resetAllData()}
         />
       )}

@@ -14,18 +14,10 @@ export const supabase = createClient(
 );
 
 export async function loadFinanceData(): Promise<FinanceData> {
-  const user = (await supabase.auth.getUser()).data.user;
-  if (!user) throw new Error("Sesi pengguna hilang.");
-  const [
-    { data: wallets },
-    { data: walletTargets },
-    { data: incomeTypes },
-    { data: entries },
-    { data: allocations },
-    { data: debts },
-    { data: debtPayments },
-    { data: assets },
-  ] = await Promise.all([
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error("Sesi pengguna hilang.");
+  const results = await Promise.all([
     supabase.from("wallets").select().order("name"),
     supabase.from("wallet_targets").select(),
     supabase.from("income_types").select(),
@@ -35,6 +27,9 @@ export async function loadFinanceData(): Promise<FinanceData> {
     supabase.from("debt_payments").select(),
     supabase.from("assets").select().order("created_at", { ascending: false }),
   ]);
+  const error = results.find((result) => result.error)?.error;
+  if (error) throw error;
+  const [wallets, walletTargets, incomeTypes, entries, allocations, debts, debtPayments, assets] = results.map((result) => result.data);
   return {
     wallets: (wallets ?? []).map((wallet) => ({ id: wallet.id, name: wallet.name, account: wallet.account, color: wallet.color })),
     walletTargets: (walletTargets ?? []).map((target) => ({ id: target.id, walletId: target.wallet_id, targetAmount: Number(target.target_amount) })),
@@ -61,7 +56,9 @@ export async function loadFinanceData(): Promise<FinanceData> {
 }
 
 export async function upsertFinanceData(data: FinanceData) {
-  const user = (await supabase.auth.getUser()).data.user;
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  const user = authData.user;
   if (!user) throw new Error("Sesi pengguna hilang.");
   const insertWallets = data.wallets.map((wallet) => ({ id: wallet.id, user_id: user.id, name: wallet.name, account: wallet.account, color: wallet.color }));
   const insertWalletTargets = data.walletTargets.map((target) => ({ id: target.id, user_id: user.id, wallet_id: target.walletId, target_amount: target.targetAmount }));
@@ -89,7 +86,7 @@ export async function upsertFinanceData(data: FinanceData) {
     const dest = data.entries.find((other) => other.groupId === entry.groupId && other.kind === "transfer-in");
     return { group_id: entry.groupId, date: entry.date, note: entry.note, from_wallet_id: entry.walletId, to_wallet_id: dest?.walletId ?? "", amount: entry.amount };
   });
-  await Promise.all([
+  const results = await Promise.all([
     supabase.from("wallets").upsert(insertWallets),
     supabase.from("wallet_targets").upsert(insertWalletTargets),
     supabase.from("income_types").upsert(insertTypes),
@@ -99,15 +96,19 @@ export async function upsertFinanceData(data: FinanceData) {
     supabase.from("debt_payments").upsert(insertDebtPayments),
     supabase.from("assets").upsert(insertAssets),
   ]);
+  const error = results.find((result) => result.error)?.error;
+  if (error) throw error;
   for (const transfer of insertTransfers) {
-    await supabase.from("transfers").upsert({ id: transfer.group_id, user_id: user.id, ...transfer });
+    await supabase.from("transfers").upsert({ id: transfer.group_id, user_id: user.id, ...transfer }).throwOnError();
   }
 }
 
 export async function clearRemoteFinanceData() {
-  const user = (await supabase.auth.getUser()).data.user;
-  if (!user) return;
-  await Promise.all([
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  const user = authData.user;
+  if (!user) throw new Error("Sesi pengguna hilang.");
+  const results = await Promise.all([
     supabase.from("ledger_entries").delete().eq("user_id", user.id),
     supabase.from("allocation_logs").delete().eq("user_id", user.id),
     supabase.from("transfers").delete().eq("user_id", user.id),
@@ -118,4 +119,6 @@ export async function clearRemoteFinanceData() {
     supabase.from("income_types").delete().eq("user_id", user.id),
     supabase.from("wallets").delete().eq("user_id", user.id),
   ]);
+  const error = results.find((result) => result.error)?.error;
+  if (error) throw error;
 }

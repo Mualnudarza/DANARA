@@ -9,8 +9,8 @@ Versi: 1.1.0
 
 ## 01 Product Overview
 - **Product Name:** Danara (Personal Finance Management)
-- **Tagline:** Aplikasi Manajemen Keuangan Personal Local-First Berbasis Alokasi Pendapatan Proporsional.
-- **Description:** Danara adalah platform pencatatan keuangan pribadi mandiri yang membagi pendapatan secara otomatis ke kantong-kantong dompet persentase, mengelola hutang piutang dengan pelunasan terhubung, melacak portofolio aset multi-kategori, dan menjamin kedaulatan data melalui arsitektur local-first tanpa kewajiban login.
+- **Tagline:** Aplikasi Manajemen Keuangan Personal Cloud-First Berbasis Alokasi Pendapatan Proporsional.
+- **Description:** Danara adalah platform pencatatan keuangan pribadi yang membagi pendapatan secara otomatis ke kantong-kantong dompet persentase, mengelola hutang piutang dengan pelunasan terhubung, dan melacak portofolio aset multi-kategori. Aplikasi mewajibkan login Google dan menyimpan data ke Supabase; akses memerlukan koneksi internet.
 
 ## 02 Problem
 1. **Friksi Pencatatan Saat Transaksi Berlangsung**: Aplikasi keuangan berbasis cloud murni seringkali mengharuskan pengguna login ulang atau terhambat koneksi internet lambat saat ingin mencatat pengeluaran harian di kasir, menyebabkan pengguna menunda dan akhirnya lupa mencatat.
@@ -19,11 +19,11 @@ Versi: 1.1.0
 4. **Resiko Kehilangan Privasi Finansial**: Banyak pengguna keberatan data transaksi dan aset mereka disimpan di server pihak ketiga tanpa kejelasan tata kelola privasi.
 
 ## 03 Goal
-Menyediakan instrumen pencatatan keuangan mobile-first yang instan (latensi interaksi di bawah 100ms), menjamin kedaulatan data pribadi di peramban lokal tanpa hambatan login wajib, serta mengotomasi pembagian alokasi dana secara proporsional (tepat 100%) dengan integritas buku besar ganda (double-entry ledger).
+Menyediakan instrumen pencatatan keuangan mobile-first yang menyimpan data secara terpusat di Supabase dengan login wajib, memblokir akses tanpa koneksi internet, serta mengotomasi pembagian alokasi dana secara proporsional (tepat 100%) dengan integritas buku besar ganda (double-entry ledger).
 
 ## 04 Target Users
 - **Individu Berpenghasilan Tetap atau Lepas**: Profesional, freelancer, atau pekerja yang mengelola pendapatan berkala dan menerapkan disiplin persentase alokasi dana (misal: 50% kebutuhan pokok, 30% operasional, 20% tabungan masa depan).
-- **Pengguna Sadar Privasi (Privacy-Conscious)**: Pengguna yang mengutamakan keamanan data finansial dan memilih penyimpanan lokal di peramban tanpa kewajiban menyerahkan email atau data identitas ke server pihak ketiga.
+- **Pengguna Berorientasi Keamanan**: Pengguna yang mengutamakan perlindungan data melalui autentikasi Google, penyimpanan cloud terisolasi per pengguna, dan kebijakan RLS.
 - **Pemilik Portofolio Multi-Instrumen**: Individu yang memiliki kewajiban hutang/piutang aktif serta aset fisik/investasi (emas, ternak, barang koleksi, saham) dan memerlukan dasbor pemantauan nilai bersih (net worth) secara terpadu.
 
 ## 05 Core Features (Version 1)
@@ -59,9 +59,10 @@ Fitur inti yang wajib berfungsi tanpa kesalahan dan telah diimplementasikan:
    - Agregasi mutasi harian berbasis tampilan kalender bulanan.
    - Indikator visual nominal masuk (+), keluar (-), dan transfer per tanggal yang dapat difilter per hari terpilih.
 
-8. **Local-First Architecture with Optional Cloud Sync**:
-   - Operasi 100% mandiri secara offline menggunakan `localStorage` peramban.
-   - Opsi menghubungkan akun Google OAuth untuk sinkronisasi dua arah ke basis data PostgreSQL Supabase dengan perlindungan Row Level Security (RLS).
+8. **Cloud-Only Architecture with Required Authentication**:
+   - Login Google OAuth wajib untuk seluruh akses data keuangan.
+   - Seluruh data dibaca dan ditulis ke PostgreSQL Supabase dengan Row Level Security (RLS); aplikasi memblokir akses saat offline.
+   - Data finansial tidak dibaca atau ditulis ke `localStorage`.
 
 9. **Tiered Danger Zone Reset**:
    - Mekanisme perlindungan data bertingkat 3 lapis untuk mereset seluruh data aplikasi:
@@ -82,7 +83,7 @@ Fungsionalitas berikut secara sadar TIDAK dibangun pada versi saat ini:
 - **Latensi Transaksi Lokal:** Di bawah 100ms untuk setiap pencatatan transaksi masuk, keluar, maupun transfer.
 - **Integritas Neraca Saldo:** Zero balance drift; selisih saldo antar transfer wajib tepat 0 Rupiah.
 - **Kestabilan Mobile:** Tidak ada layout shift, tumpang tindih elemen navigasi, atau tabrakan header pada layar ponsel lebar 360px hingga 430px.
-- **Ketahanan Offline:** 100% fungsionalitas pencatatan dapat berjalan tanpa sambungan internet aktif.
+- **Keamanan Akses Offline:** 100% data dan fungsi finansial diblokir saat tidak ada koneksi internet.
 - **Kualitas Kode:** 100% pengujian unit lolos pada Vitest, dan build produksi TypeScript bersih dari tipe `any`.
 
 ## 08 Acceptance Criteria

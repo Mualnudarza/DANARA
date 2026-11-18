@@ -2,14 +2,14 @@
 
 Dokumen Penanggung Jawab: KURATOR & ANALIS (Direktorat I: Bisnis & Pengetahuan)
 Fungsi Berkas: Panduan Orientasi Pengembang Manusia (Human Onboarding Guide)
-Status: Aktif (Versi 1.1.0 - Local-First & Mobile-First)
+Status: Aktif (Versi 1.1.0 - Cloud-Only & Mobile-First)
 
 ---
 
 ## 1. Deskripsi Proyek
-Danara adalah aplikasi web manajemen keuangan personal berbasis *local-first* yang dirancang untuk mengotomasi pembagian alokasi pendapatan secara proporsional ke pos-pos dompet, mencatat mutasi pengeluaran dan perpindahan saldo (double-entry ledger), mengelola hutang piutang aktif, serta melacak valuasi portofolio aset multi-kategori secara terpadu.
+Danara adalah aplikasi web manajemen keuangan personal berbasis cloud yang mengotomasi alokasi pendapatan, mencatat mutasi dan perpindahan saldo (double-entry ledger), mengelola hutang piutang, serta melacak portofolio aset multi-kategori.
 
-Aplikasi memprioritaskan kedaulatan data pengguna dengan menyimpan data secara instan di peramban lokal (`localStorage`) tanpa mewajibkan login, namun tetap menyediakan opsi sinkronisasi dua arah ke basis data PostgreSQL Supabase yang dilindungi Row Level Security (RLS).
+Login Google wajib. Data hanya disimpan di PostgreSQL Supabase dengan perlindungan Row Level Security (RLS); aplikasi memblokir akses saat offline dan tidak menggunakan cache finansial lokal.
 
 Untuk membaca spesifikasi lengkap perancangan sistem informasi, silakan pelajari dokumen di direktori `docs/`:
 - Spesifikasi Produk & Lingkup MVP: [docs/PRD.md](docs/PRD.md)
@@ -29,7 +29,7 @@ Pastikan lingkungan pengembangan lokal telah terpasang:
 - Node.js versi 20.x LTS atau lebih baru
 - Manajer paket npm (atau pnpm / yarn)
 - Git untuk kontrol versi
-- (Opsional) Akun Supabase jika ingin mengaktifkan pencadangan cloud
+- Akun Supabase yang telah dikonfigurasi untuk autentikasi Google dan penyimpanan data cloud
 
 ## 3. Konfigurasi Lingkungan (.env)
 Salin berkas contoh variabel lingkungan dan sesuaikan nilainya:
@@ -44,7 +44,7 @@ VITE_SUPABASE_URL="https://your-project.supabase.co"
 VITE_SUPABASE_ANON_KEY="your-anon-key"
 ```
 
-Catatan: Danara tetap dapat berjalan 100% penuh secara offline dalam Mode Lokal meskipun variabel lingkungan Supabase dikosongkan.
+Danara memerlukan variabel lingkungan Supabase dan koneksi internet. Jika autentikasi atau pembacaan data cloud gagal, aplikasi tidak menampilkan data finansial.
 
 ## 4. Instalasi dan Eksekusi Lokal
 Jalankan langkah berikut secara berurutan:

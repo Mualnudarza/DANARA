@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, Cloud, LogIn, LogOut } from "lucide-react";
+import { AlertTriangle, Cloud, LogOut } from "lucide-react";
 import { allocationTotal } from "../../lib/finance";
 import type { FinanceData, IncomeType, Wallet } from "../../lib/types";
 import type { UserLike } from "../layout/types";
@@ -12,7 +12,6 @@ export default function SettingsView({
   addIncomeType,
   updateIncomeType,
   deleteIncomeType,
-  signInGoogle,
   signOut,
   onResetAllData,
 }: {
@@ -21,54 +20,37 @@ export default function SettingsView({
   addIncomeType: (name: string) => void;
   updateIncomeType: (type: IncomeType) => void;
   deleteIncomeType: (id: string) => void;
-  signInGoogle?: () => void;
   signOut?: () => void;
   onResetAllData?: () => void;
 }) {
   const [newName, setNewName] = useState("");
   const [showResetModal, setShowResetModal] = useState(false);
-  const isLocal = user?.isLocal ?? true;
 
   return (
     <div className="grid max-w-4xl gap-4 sm:gap-5">
       {/* Account & Storage Sync Section */}
       <section className="rounded-xl border border-line bg-surface p-4 shadow-[0_1px_2px_0_rgb(0_0_0/0.05)]">
         <h2 className="text-sm font-bold text-ink-900">Penyimpanan &amp; Akun</h2>
-        <p className="mt-0.5 text-xs text-ink-500">
-          {isLocal
-            ? "Danara berjalan dalam mode lokal. Data tersimpan di HP ini tanpa perlu login."
-            : "Akun Google terhubung. Data dicadangkan otomatis ke cloud Supabase."}
-        </p>
+        <p className="mt-0.5 text-xs text-ink-500">Data tersimpan di akun Supabase dan memerlukan koneksi internet.</p>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-slate-50 p-3">
           <div className="flex items-center gap-2.5">
-            <span className={`grid h-8 w-8 place-items-center rounded-lg ${isLocal ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-100 text-emerald-800">
               <Cloud size={18} />
             </span>
             <div>
-              <p className="text-xs font-bold text-ink-900">{isLocal ? "Mode Lokal (Offline)" : "Cloud Supabase Aktif"}</p>
+              <p className="text-xs font-bold text-ink-900">Cloud Supabase Aktif</p>
               <p className="text-[11px] text-ink-500">{user?.email || "Perangkat ini"}</p>
             </div>
           </div>
 
-          {isLocal ? (
-            signInGoogle && (
-              <button
-                onClick={signInGoogle}
-                className="flex items-center gap-1.5 rounded-lg bg-ink-900 px-3 py-2 text-xs font-semibold text-white active:bg-ink-700"
-              >
-                <LogIn size={14} /> Hubungkan Akun Google
-              </button>
-            )
-          ) : (
-            signOut && (
-              <button
-                onClick={signOut}
-                className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink-700 active:bg-slate-100"
-              >
-                <LogOut size={14} /> Putuskan / Pakai Lokal
-              </button>
-            )
+          {signOut && (
+            <button
+              onClick={signOut}
+              className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink-700 active:bg-slate-100"
+            >
+              <LogOut size={14} /> Keluar dari akun
+            </button>
           )}
         </div>
       </section>

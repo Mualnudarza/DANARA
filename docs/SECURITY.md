@@ -10,7 +10,7 @@ Versi: 1.1.0
 ## 01 General Security Rules
 1. **Larangan Keras Kredensial Hardcoded**: Kunci anon publik Supabase dan URL basis data dimuat murni melalui variabel lingkungan Vite (`import.meta.env.VITE_SUPABASE_URL` dan `import.meta.env.VITE_SUPABASE_ANON_KEY`). Kunci rahasia layanan (*service role key*) dilarang keras disertakan dalam bundel frontend.
 2. **Penggunaan Variabel Lingkungan (.env)**: Berkas `.env.local` dikecualikan dari Git melalui `.gitignore`. Dokumentasi variabel lingkungan disediakan di `.env.example`.
-3. **Kedaulatan Data Lokal**: Dalam mode lokal (offline), seluruh data finansial hanya tersimpan di dalam memori peramban pengguna (`localStorage`), tanpa transmisi jaringan keluar ke server pihak ketiga mana pun.
+3. **Cloud-Only Finance Data**: Data finansial hanya diakses dari Supabase setelah autentikasi; aplikasi tidak membaca atau menyimpan data finansial di `localStorage`, dan memblokir tampilan/mutasi saat offline.
 
 ## 02 Input Validation & Trust Boundaries
 - **Sanitasi Masukan Numerik**: Setiap masukan uang melalui formulir diproses menggunakan parser utilitas `inputNumber(value: string)` yang mengeksekusi pembersihan karakter non-digit melalui ekspresi reguler `value.replace(/\D/g, "")`.

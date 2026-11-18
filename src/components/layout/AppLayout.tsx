@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, CalendarDays, Cloud, Gem, Handshake, History, LogIn, LogOut, Menu, Plus, RefreshCw, Settings2, WalletCards, X } from "lucide-react";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, CalendarDays, Gem, Handshake, History, LogOut, Menu, Plus, RefreshCw, Settings2, WalletCards, X } from "lucide-react";
 import { rupiah } from "../../lib/finance";
 import type { ModalKind, UserLike, View } from "./types";
 import Toast from "../ui/Toast";
@@ -43,7 +43,6 @@ export default function AppLayout({
   clearMessage,
   refresh,
   signOut,
-  signInGoogle,
   children,
 }: {
   view: View;
@@ -56,14 +55,12 @@ export default function AppLayout({
   clearMessage: () => void;
   refresh: () => void;
   signOut: () => void;
-  signInGoogle?: () => void;
   children: React.ReactNode;
 }) {
   const [drawer, setDrawer] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
-  const displayName = user.user_metadata?.full_name || user.email || "Pengguna Lokal";
+  const displayName = user.user_metadata?.full_name || user.email || "Pengguna";
   const avatar = user.user_metadata?.avatar_url as string | undefined;
-  const isLocal = user.isLocal ?? false;
 
   return (
     <div className="min-h-screen bg-canvas text-ink-900">
@@ -79,7 +76,7 @@ export default function AppLayout({
           </button>
           <div>
             <h1 className="text-sm font-bold leading-tight text-ink-900">{viewTitles[view]}</h1>
-            <p className="text-[10px] text-ink-500">{isLocal ? "Mode Lokal (Offline)" : "Cloud Terhubung"}</p>
+            <p className="text-[10px] text-ink-500">Cloud Supabase</p>
           </div>
         </div>
 
@@ -133,23 +130,7 @@ export default function AppLayout({
             </nav>
 
             <div className="mt-auto border-t border-line pt-3">
-              {isLocal ? (
-                <div className="grid gap-2">
-                  <div className="rounded-lg border border-line bg-white p-2.5 text-xs">
-                    <p className="font-semibold text-ink-800">Mode Lokal (Offline)</p>
-                    <p className="mt-0.5 text-[11px] text-ink-500">Data tersimpan di perangkat ini tanpa perlu login.</p>
-                  </div>
-                  {signInGoogle && (
-                    <button
-                      onClick={() => { setDrawer(false); signInGoogle(); }}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-ink-900 px-3 py-2 text-xs font-semibold text-white active:bg-ink-700"
-                    >
-                      <Cloud size={14} /> Hubungkan Akun Google
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="grid gap-2">
+              <div className="grid gap-2">
                   <div className="flex items-center gap-2.5 rounded-lg border border-line bg-white p-2">
                     {avatar ? (
                       <img src={avatar} alt="" className="h-8 w-8 rounded-full" />
@@ -167,10 +148,9 @@ export default function AppLayout({
                     onClick={() => { setDrawer(false); signOut(); }}
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink-700 active:bg-slate-100"
                   >
-                    <LogOut size={14} /> Keluar (Pakai Mode Lokal)
+                    <LogOut size={14} /> Keluar dari akun
                   </button>
                 </div>
-              )}
             </div>
           </aside>
         </div>
@@ -206,20 +186,7 @@ export default function AppLayout({
               <p className="tabular text-base font-extrabold tracking-tight text-ink-900">{rupiah.format(totalBalance)}</p>
             </div>
 
-            {isLocal ? (
-              <div className="rounded-lg border border-line bg-surface p-2.5 text-center">
-                <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-ink-700">Mode Lokal (Offline)</span>
-                {signInGoogle && (
-                  <button
-                    onClick={signInGoogle}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-ink-900 px-2 py-1.5 text-xs font-semibold text-white hover:bg-ink-700"
-                  >
-                    <LogIn size={13} /> Masuk Google
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5">
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5">
                 {avatar ? (
                   <img src={avatar} alt="" className="h-7 w-7 rounded-full" />
                 ) : (
@@ -231,8 +198,7 @@ export default function AppLayout({
                 <button onClick={signOut} aria-label="Keluar" title="Keluar" className="rounded-md p-1 text-ink-500 hover:bg-slate-200">
                   <LogOut size={15} />
                 </button>
-              </div>
-            )}
+            </div>
           </div>
         </aside>
 

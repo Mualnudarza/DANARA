@@ -8,7 +8,7 @@ Versi: 1.1.0
 ---
 
 ## 01 System Overview
-Danara dirancang dengan topologi **Local-First Client-Side Application** yang memiliki kapabilitas sinkronisasi opsional ke **Cloud Backend Terkelola (Supabase)**. Klien dapat beroperasi secara otonom tanpa jaringan internet dan tanpa keharusan membuat akun atau melewati sesi login.
+Danara menggunakan arsitektur **Cloud-Only** dengan **Supabase** sebagai sumber data tunggal. Login Google wajib; klien memblokir akses ke data finansial tanpa sesi autentikasi dan koneksi internet. Cache lokal finansial tidak digunakan.
 
 ```mermaid
 graph TD
@@ -16,7 +16,6 @@ graph TD
         UI["Antarmuka Pengguna (Vite + React 19 + Tailwind v4)"]
         State["State Manager (React Hooks + useMemo)"]
         FinanceEngine["Mesin Hitung Finansial (finance.ts)"]
-        LocalStorage["Penyimpanan Lokal (localStorage: danara_finance_data_v1)"]
         SupabaseClient["Klien Supabase JS (Session Persistence & Auto-Refresh)"]
     end
 
@@ -28,8 +27,7 @@ graph TD
 
     UI --> State
     State <--> FinanceEngine
-    State <--> LocalStorage
-    State -.->|"Sinkronisasi saat terhubung"| SupabaseClient
+    State <--> SupabaseClient
     SupabaseClient <-->|"OAuth 2.0 PKCE"| AuthService
     SupabaseClient <-->|"RESTful PostgREST over HTTPS"| RLSPolicies
     RLSPolicies <--> PostgresDB
@@ -46,7 +44,7 @@ Agen AI dilarang memasang atau mengimpor pustaka di luar tabel terotorisasi ini:
 | Styling Engine | Tailwind CSS | 4.3+ | Utility-first CSS generasi 4 via @tailwindcss/vite |
 | Tipografi | Plus Jakarta Sans | 5.3+ | Fontsans modern dengan tabular numbers untuk angka keuangan |
 | Ikonografi | Lucide React | Latest | Line-icons konsisten ukuran 14px hingga 24px |
-| Penyimpanan Klien | Web Storage API | Native | Persistensi instan data keuangan di perangkat lokal |
+| State Klien | React state (memori sesi) | Native | Data cloud hanya ditampilkan setelah autentikasi dan pemuatan berhasil |
 | Backend & Cloud | Supabase Platform | 2.116+ | PostgreSQL terkelola, Auth OAuth, RLS, Edge Functions |
 | Pengujian Unit | Vitest & JSDOM | Latest | Pengujian unit deterministik secepat kilat untuk logika murni |
 
@@ -99,8 +97,8 @@ DANARA/
 │   ├── lib/
 │   │   ├── finance.ts            # Fungsi kalkulasi finansial murni (Pure logic)
 │   │   ├── finance.test.ts       # Pengujian unit kalkulasi finansial
-│   │   ├── storage.ts            # Adapter persistensi localStorage lokal
-│   │   ├── storage.test.ts       # Pengujian persistensi lokal
+│   │   ├── storage.ts            # Nilai awal tanpa persistensi lokal
+│   │   ├── storage.test.ts       # Pengujian nilai awal non-persisten
 │   │   ├── supabase.ts           # Adapter komunikasi API Supabase & RLS
 │   │   └── types.ts              # Definisi entitas dan tipe data global
 │   ├── styles/
@@ -126,12 +124,11 @@ DANARA/
 ## 04 Data Flow & Business Logic
 
 ### 1. Alur Alokasi Pendapatan Proporsional (Income Allocation)
-1. Pengguna memasukkan nominal dana masuk kotor (contoh: Rp 10.000.000) dan memilih template `IncomeType` (contoh: Gaji Bulanan).
-2. Sistem memvalidasi apakah konfigurasi persentase dompet pada template tersebut berjumlah tepat 100% via `isValidAllocation()`.
-3. Mesin `splitIncome()` memecah nominal ke masing-masing dompet berdasarkan bobot persentase. Pembulatan pecahan dialokasikan ke dompet urutan terakhir untuk mencegah hilangnya selisih nominal (zero rounding leakage).
-4. Dihasilkan sebuah `groupId` berbasis UUID. Setiap dompet tujuan menerima satu entri bertipe `income` di dalam `ledger_entries`.
-5. Satu entri log audit dicatat di tabel `allocation_logs`.
-6. Data disimpan secara instan ke `localStorage` dan di-upsert ke Supabase jika terhubung ke cloud.
+1. Pengguna yang telah login memasukkan nominal dana masuk kotor dan memilih template `IncomeType`.
+2. Sistem memvalidasi persentase via `isValidAllocation()`.
+3. Mesin `splitIncome()` memecah nominal; pembulatan pecahan dialokasikan ke dompet terakhir.
+4. Sistem membentuk entri buku besar dan log audit.
+5. Perubahan ditulis ke Supabase; bila koneksi gagal, operasi gagal dan aplikasi memblokir akses data.
 
 ### 2. Alur Pengeluaran Kas (Expense)
 1. Pengguna memilih dompet sumber dan mengisi nominal pengeluaran.
@@ -167,7 +164,7 @@ DANARA/
    - Tahap 1: Membaca daftar item yang akan dihapus.
    - Tahap 2: Menandai checkbox persetujuan resiko permanen.
    - Tahap 3: Mengetik kata kunci wajib `HAPUS SEMUA`.
-3. Setelah tombol diaktifkan dan diklik, `localStorage` dibersihkan dan dikembalikan ke `initialFinanceData`.
+3. Reset menghapus data cloud pengguna lalu menulis kembali nilai awal `initialFinanceData`.
 4. Jika pengguna terhubung ke cloud Supabase, helper `clearRemoteFinanceData()` mengeksekusi penghapusan kaskade berurutan pada 9 tabel PostgreSQL, lalu meng-upsert data awal default.
 
 ## 05 Relational Database Schema (PostgreSQL)
@@ -285,5 +282,5 @@ erDiagram
 
 ## 06 Scalability & Modular Rules
 1. **Pemisahan Logika Murni (Pure Financial Logic)**: Semua perhitungan agregasi, saldo, pemotongan persen, dan kalkulasi P/L diisolasi pada `src/lib/finance.ts` dan wajib 100% lulus uji unit tanpa ketergantungan pada DOM atau browser state.
-2. **Kedaulatan Klien (Local-First Priority)**: State antarmuka selalu membaca dan menulis ke penyimpanan lokal terlebih dahulu untuk menjamin zero latency. Sinkronisasi cloud berjalan asinkron di latar belakang tanpa menghalangi kelancaran pengguna.
-3. **Pemberian Identitas UUID Sisi Klien**: Seluruh entitas baru (wallet, entry, debt, asset) diberi ID acak berbasis `crypto.randomUUID()` di sisi klien sebelum disimpan ke basis data, mencegah konflik kunci primer saat sinkronisasi data lokal ke remote.
+2. **Cloud as Source of Truth**: State finansial dimuat dari Supabase setelah autentikasi; operasi tulis menunggu keberhasilan cloud dan tidak menyinkronkan cache lokal.
+3. **Pemberian Identitas UUID Sisi Klien**: Entitas baru diberi ID acak berbasis `crypto.randomUUID()` sebelum disimpan ke basis data.

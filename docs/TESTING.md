@@ -7,29 +7,21 @@ Versi: 1.1.0
 
 ---
 
-## 01 Testing Strategy & Pyramid
-Danara menitikberatkan pengujian pada integritas kalkulasi keuangan murni dan persistensi state lokal untuk menjamin akurasi mutasi buku besar:
+## 01 Testing Strategy
+Danara menitikberatkan pengujian pada kalkulasi keuangan murni serta autentikasi dan kegagalan cloud yang wajib memblokir akses data.
+
+- **Unit:** logika keuangan dan nilai default (Vitest).
+- **Integrasi:** autentikasi, query Supabase, dan propagasi error.
+- **UI:** login wajib, pemuatan cloud, serta blokir offline.
+
+Test files berada berdampingan dengan modul terkait di `src/lib/`.
 
 ```text
-       ▲
-      / \     End-to-End Tests: Verifikasi alur UI mobile dan alur form transaksi
-     /   \    Perkakas: Pengujian manual peramban & Playwright
-    /─────\
-   /       \   Integration Tests: Persistensi adapter localStorage & sinkronisasi Supabase
-  /         \  Perkakas: Vitest, JSDOM (src/lib/storage.test.ts)
- /───────────\
-/             \ Unit Tests: Logika keuangan murni, pemecahan alokasi, saldo, aset P/L
-/               \ Perkakas: Vitest (src/lib/finance.test.ts)
-─────────────────
+Test files berada berdampingan dengan modul terkait di src/lib/.
 ```
-
 ## 02 Test File Conventions
 - **Lokasi Berkas Uji:** Diletakkan berdampingan dengan berkas sumber yang diuji di dalam direktori `src/lib/`.
 - **Pola Penamaan:** `[NamaModul].test.ts`.
-- **Direktif Lingkungan Khusus:** Untuk modul yang berinteraksi dengan API peramban (seperti `localStorage`), wajib menyematkan direktif lingkungan pada baris pertama:
-  ```typescript
-  // @vitest-environment jsdom
-  ```
 - **Struktur Blok Pengujian:**
   - `describe("nama fungsi/modul", () => { ... })`
   - `it("should [ekspektasi perilaku] when [kondisi]", () => { ... })`
@@ -42,8 +34,7 @@ Setiap penambahan atau modifikasi fitur wajib memenuhi kriteria gerbang mutu:
 3. **Build Status Bersih:** Perintah `npm run build` dan `npm test` wajib menghasilkan kode keluar 0 (*exit code 0*) tanpa galat tipe TypeScript atau kegagalan assertions.
 
 ## 04 Mocking Standards
-- Pengujian modul `src/lib/storage.ts` memanfaatkan lingkungan simulasi JSDOM untuk mengisolasi `window.localStorage`.
-- Setiap blok pengujian wajib membersihkan memori lokal sebelum dan sesudah uji dijalankan via `localStorage.clear()` guna mencegah polusi state antar-spesifikasi.
+Mock Supabase pada batas modul; pastikan kegagalan query tidak berubah menjadi data kosong yang tampak valid.
 
 ## 05 Useful Test Commands
 ```bash

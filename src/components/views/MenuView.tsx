@@ -17,8 +17,7 @@ export default function MenuView({
   assetsCount,
   activeDebtsCount,
 }: MenuViewProps) {
-  const isLocal = user.isLocal ?? true;
-  const displayName = user.user_metadata?.full_name || user.email || "Pengguna Lokal";
+  const displayName = user.user_metadata?.full_name || user.email || "Pengguna";
 
   const menuSections = [
     {
@@ -64,13 +63,11 @@ export default function MenuView({
               <h2 className="text-sm font-bold text-ink-900">{displayName}</h2>
               <p className="flex items-center gap-1.5 text-xs text-ink-500">
                 <Cloud size={12} />
-                {isLocal ? "Mode Lokal (Offline pada perangkat ini)" : "Tersinkronisasi ke Cloud Supabase"}
+                Tersimpan di Cloud Supabase; akses perlu internet.
               </p>
             </div>
           </div>
-          <span className="rounded-full border border-line bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-ink-700">
-            {isLocal ? "Lokal" : "Cloud"}
-          </span>
+          <span className="rounded-full border border-line bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-ink-700">Cloud</span>
         </div>
 
         <div className="mt-3 flex items-center justify-between text-xs">
@@ -113,7 +110,7 @@ export default function MenuView({
           Danara Keuangan Personal v1.1.0
         </p>
         <p className="mt-1 text-[11px] text-ink-500">
-          Penyimpanan lokal instan berintegritas tinggi dengan proteksi pembulatan alokasi nol.
+          Data tersimpan di cloud Supabase dan memerlukan koneksi internet.
         </p>
       </section>
     </div>
